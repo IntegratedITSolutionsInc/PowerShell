@@ -214,7 +214,7 @@ function Get-MailFlowStats
 
     Begin
     {
-        $file_path_csv = "$env:USERPROFILE\desktop\Email_stats_$(get-date -f yyyyMMdd).csv"
+        $file_path_csv = "$env:TEMP\Email_stats_$(get-date -f yyyyMMdd).csv"
         $shouldemail = Read-Host -Prompt "Do you want to have the results emailed to you along with a CSV attachment? Enter 'Yes' if desired. If no email is required then output is .csv located at $file_path_csv"
         if($shouldemail -like "yes"){
         $office365 = Read-Host -Prompt "Do you want to send through Office 365? Enter Yes or No"
