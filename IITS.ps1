@@ -204,11 +204,7 @@ function Get-MailFlowStats
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
         $Param1,
-        [switch]$errorlog,
-
-        # Param2 help description
-        [int]
-        $Param2
+        [switch]$errorlog
     )
 
     Begin
