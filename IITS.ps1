@@ -232,7 +232,7 @@ function Get-MailFlowStats
             }
         catch{
             Write-Output "There was an issue connecting to Office 365 with the credentials supplied.  Please try again or check the error log."
-            $session_issue | Out-File -force "$env:USERPROFILE\desktop\Error_log_$(get-date -f yyyyMMdd).txt"
+            $session_issue | Out-File -force "$env:TEMP\Error_log_$(get-date -f yyyyMMdd).txt"
             throw
             }
     }
