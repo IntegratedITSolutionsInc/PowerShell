@@ -68,8 +68,8 @@ function Email-MSalarm
 
     Begin
     {
-        $key = Get-Content "C:\Scripts\key.key" -ErrorAction Stop -ErrorVariable CurrentError
-        $password = Get-Content "C:\Scripts\passwd.txt" | ConvertTo-SecureString -Key $key
+        $key = Get-Content "C:\IITS_Scripts\Key.key" -ErrorAction Stop -ErrorVariable CurrentError
+        $password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key
         $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "forecast@integratedit.com",$password
         $ErrorLog = "$env:TEMP\EmailMSalarm_IITS.txt"
     }
