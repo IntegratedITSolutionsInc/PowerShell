@@ -424,3 +424,38 @@ function disable-365-account
     Set-MsolUser -UserPrincipalName $mailbox -BlockCredential $true
     
 }
+
+<#
+.Synopsis
+   This cmdlet will find the account used to run all services on the machine. 
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Get-ServiceAccount
+{
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([int])]
+    Param
+    (
+    )
+
+    Begin
+    {
+        $servers = get-adcomputers
+    }
+    Process
+    {
+        foreach($server in $servers)
+        {
+        Get-WmiObject Win32_Service | Format-Table Name,startname
+        }
+    }
+    End
+    {
+    }
+}
