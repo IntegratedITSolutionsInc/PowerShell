@@ -21,11 +21,18 @@ function Get-KaseyaMachineID
     }
     Process
     {
-        if($(Get-Process -Name AgentMon -ErrorAction SilentlyContinue).Name)
-        { 
-            $(Get-ItemProperty -Path "HKLM:\Software\WOW6432Node\Kaseya\Agent\INTTSL74824010499872" -Name MachineID -ErrorAction Stop -ErrorVariable CurrentError).MachineID
+        try
+        {
+            if($(Get-Process -Name AgentMon -ErrorAction SilentlyContinue).Name)
+            { 
+                $(Get-ItemProperty -Path "HKLM:\Software\WOW6432Node\Kaseya\Agent\INTTSL74824010499872" -Name MachineID -ErrorAction Stop -ErrorVariable CurrentError).MachineID
+            }
+            Else
+            {
+                $env:computername
+            }
         }
-        Else
+        Catch
         {
             $env:computername
         }   
