@@ -77,9 +77,10 @@ function Email-MSalarm
     {
         try
         {
+        $CurrentError = $null
         $ErrorLog = "$env:TEMP\EmailMSalarm_IITS.txt"
         $key = Get-Content "C:\IITS_Scripts\Key.key" -ErrorAction Stop -ErrorVariable CurrentError
-        $password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key
+        $password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key -ErrorAction Stop -ErrorVariable CurrentError
         $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "forecast@integratedit.com",$password
         }
         Catch
@@ -89,33 +90,40 @@ function Email-MSalarm
     }
     Process
     {
-        if($Attachment)
+        if(!$CurrentError)
         {
+            if($Attachment)
+                {
             Try
                 {
-            Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
-            {Script}
+                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                    {Script}
         
-            $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
-        }
+                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                }
             Catch
                 {
-            "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
+                    "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
+                }
+        }
+            Else
+                {
+            Try
+            {
+                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                {Script}
+        
+                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -ErrorAction Stop -ErrorVariable CurrentError
+            }
+            Catch
+            {
+                "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
+            }
         }
         }
         Else
         {
-            Try
-            {
-            Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
-            {Script}
-        
-            $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -ErrorAction Stop -ErrorVariable CurrentError
-            }
-            Catch
-            {
-            "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
-            }
+            "$(Get-Date) - Skipped process block due to not having the key file or the password.  Error = $CurrentError" | Out-File -FilePath $ErrorLog -Force -Append
         }
     }
     End
@@ -151,9 +159,6 @@ function Toggle-ActionCenter
 
     Begin
     {
-        $to = "msalarm@integratedit.com"
-        $from = "script_genie@integatedit.com"
-        $smtpserver = "outlook.office365.com"
         $regpath = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
         $namedword = "DisableNotificationCenter"
         $output= "$env:temp\actioncenter_IITS.txt"
@@ -311,5 +316,84 @@ function Get-MailFlowStats
         }
     Write-Output "Closing powershell sessions: $(Get-PSSession)"
     Get-PSSession | Remove-PSSession       
+    }
+}
+
+<#
+.Synopsis
+   This removes a word from outcorrect in anything that uses Microsoft Word. 
+.DESCRIPTION
+   This cmdlet will connect to the local machine's Microsoft Word installation and then remove a word so that it does not autocorrect to another word.  ehr will no longer autocorrect to her.
+.EXAMPLE
+   Remove-AutoCorrect -WordToRemove "ehr"
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Remove-AutoCorrect
+{
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([int])]
+    Param
+    (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        [string]$WordToRemove
+    )
+
+    Begin
+    {
+    try
+    {
+        $ErrorLog= "$env:temp\disableautocorrectoutput_IITS.txt"
+        $found=0
+        $word = New-Object -ComObject word.application -ErrorAction Stop -ErrorVariable CurrentError
+        $word.visible = $false
+    }
+    catch
+    {
+        "$(Get-Date) - Problem starting WORD as a com object.  Error = $CurrentError" | Out-File -FilePath $ErrorLog -Append
+    }
+    }
+    Process
+    {
+        if(!$CurrentError)
+        {
+            Try
+            {
+                $entries = $word.AutoCorrect.entries
+                foreach($e in $entries)
+                { 
+                    if($e.name -eq $WordToRemove)
+                    {
+                        "$(Get-Date) - Found $WordToRemove in Auto Correct List." | Out-File -FilePath $ErrorLog -Append
+                        $found=1
+                        $e.delete()
+                        "$(Get-Date) - Deleted $WordToRemove in Auto Correct List." | Out-File -FilePath $ErrorLog -Append
+                    }
+                }
+                if($found -eq 0)
+                {
+                    "$(Get-Date) - Did not find $WordToRemove in Auto Correct List." | Out-File -FilePath $ErrorLog -Append
+                }
+            }
+            Catch
+            {
+                "$(Get-Date) - Something went wrong while trying to remove the word $WordToRemove" | Out-File -FilePath $ErrorLog -Append
+            }
+        }
+        Else
+        {
+            Email-MSalarm -From Script_Genie@integratedit.com -Body "Problem starting WORD as a com object.  Error = $CurrentError" -Attachment $ErrorLog
+        }
+    }
+    End
+    {
+        $word.Quit()
+        $word = $null
+        [gc]::collect()
+        [gc]::WaitForPendingFinalizers()
     }
 }
