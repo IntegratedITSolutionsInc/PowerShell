@@ -536,7 +536,7 @@ function external-kaseya-push
 
     #$kaseya_launch.Arguments = $kaseya_switches 
 
-    $kaseya_process = [Diagnostics.Process]::Start($kaseya_launch)p 
+    $kaseya_process = [Diagnostics.Process]::Start($kaseya_launch) 
     $kaseya_process.WaitForExit() 
     }
     End
@@ -561,11 +561,10 @@ function hide-user-from-GAL
     [OutputType([int])]
     Param
     (
-        # Param1 help description
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
-        Param ([string]$mailbox=(read-host "Enter user's email address:"))
+        [string]$mailbox=(read-host "Enter user's email address:")
 
     )
 
