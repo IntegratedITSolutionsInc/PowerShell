@@ -4,3 +4,4 @@ Get-KaseyaMachineID
 Email-MSalarm
 Toggle-ActionCenter
 Get-MailFlowStats
+get-app-version
