@@ -449,3 +449,65 @@ $parts[0]
 
 }
 
+<#
+.Synopsis
+   External Push of Kaseya via Powershell
+.DESCRIPTION
+   If a machine on a network doesn't have powershell OR if it's a machine
+   from an acquisistion that we don't have access to yet, this will install
+   Kaseya
+.EXAMPLE
+   After execution, you'll be asked for the path of the Kaseya installer for
+   the client
+
+.EXAMPLE
+   
+#>
+function Verb-Noun
+{
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([int])]
+    Param
+    (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        Param ([string]$kaseyaLink=(read-host "Input the full URL for the Kaseya client to be installed.  Example: https://www.dropbox.com/s/o6q9bbe91jcsoa7/sccit_KcsSetup.exe?dl=1"))
+
+    )
+
+    Begin
+    {
+    $sccit_url = $kaseyaLink 
+    $kaseya_path= "$Env:SystemDrive\iits_mgmt" 
+    }
+    Process
+    {
+    #Create Kaseya download path if it doesn't already exist 
+    if ((Test-Path $kaseya_path) -eq $false) {New-Item -type directory -Path $kaseya_path | out-null} 
+    $tableurl
+    #Download Kaseya if it's not already there 
+    if ((Test-Path "$kaseya_path\sccit_KcsSetup.exe") -eq $false)
+        { 
+            $kaseya_dload_file = "$kaseya_path\sccit_KcsSetup.exe" 
+            $kaseya_dload = new-object System.Net.WebClient 
+            $kaseya_dload.DownloadFile($sccit_url,$kaseya_dload_file) 
+        } 
+
+    #Run Kaseya and wait for it to exit 
+    $kaseya_launch = new-object Diagnostics.ProcessStartInfo 
+    $kaseya_launch.FileName = "$kaseya_path\sccit_KcsSetup.exe" 
+
+    #$kaseya_launch.Arguments = $kaseya_switches 
+
+    $kaseya_process = [Diagnostics.Process]::Start($kaseya_launch)p 
+    $kaseya_process.WaitForExit() 
+    }
+    End
+    {
+    }
+}
+
+
