@@ -463,7 +463,7 @@ $parts[0]
 .EXAMPLE
    
 #>
-function Verb-Noun
+function external-kaseya-push
 {
     [CmdletBinding()]
     [Alias()]
