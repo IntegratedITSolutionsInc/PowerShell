@@ -2,7 +2,8 @@
 
 This file contains all of the functions that IITS distributes to all managed services machines.  The current list of command available are:
 
-|_.Script|_.Author|
+|Script|Author|
+|---|---|
 |Email-MSalarm|Darren Khan|
 |external-kaseya-push|Michael Surtees|
 |get-app-version|Michael Surtees|
