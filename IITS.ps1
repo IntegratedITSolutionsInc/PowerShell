@@ -556,3 +556,76 @@ function hide-user-from-GAL
     {
     }
 }
+
+<#
+.Synopsis
+   Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
+.DESCRIPTION
+   Determine the root org (groupName) based on a given machine ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key ESETAgentKey.csv to get a Dropbox download link to a company-specific ESET Agent installer, then move the installer to the Kaseya agent Temp folder (C:\IITS_Mgmt\Temp\).
+.EXAMPLE
+   Get-EsetLink [-machName] sccit [-esetKey] C:\Key.csv
+.INPUTS
+   machName (string), esetKey (string)
+.OUTPUTS
+   URL (string)
+.FUNCTIONALITY
+   Downloads a URL link to an installer.
+#>
+
+function Get-EsetLink
+{
+    [CmdletBinding(DefaultParameterSetName='Parameter Set 1', 
+                  SupportsShouldProcess=$true, 
+                  PositionalBinding=$false,
+                  HelpUri = 'http://www.microsoft.com/',
+                  ConfirmImpact='Medium')]
+    [Alias("Get-ESET")]
+    [OutputType([String])]
+    Param
+    (
+        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
+        [Parameter(Mandatory=$true, 
+                   ValueFromPipeline=$true,
+                   ValueFromPipelineByPropertyName=$true, 
+                   ValueFromRemainingArguments=$false,
+                   Position=0,
+                   ParameterSetName='Parameter Set 1')]
+        [ValidateNotNull()]
+        [ValidateNotNullOrEmpty()]
+        [Alias("name","machine")] 
+        [String]$machName,
+        
+        # The source location of the ESET key.
+        [Parameter(Mandatory=$true,
+                   Position=1,
+                   ParameterSetName='Parameter Set 1')]
+        [ValidateNotNull()]
+        [ValidateNotNullOrEmpty()]
+        [Alias('key','list','source')]
+        $esetKey
+    )
+    
+    Begin
+    {
+    # Get the OS architecture of the target (Windows) machine.
+    (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+    [Int]$machOS=$matches[0]
+    
+    # RegEx the machine name to extract the group name.
+    $machName -match '\w+$' | Out-Null
+    [String]$groupName = $matches[0]
+    }
+    Process
+    {
+    # Import the key and search for the group and OS architecture. Save the result to a container.
+    $orgLink = (Import-Csv $esetKey | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
+    }
+    End
+    {
+    # Print the container with the ESET link.
+    return $orgLink
+
+    # TEMPORARY; copy link to txt file for verification purposes.
+    #New-Item -path C:\IITS_Mgmt\Temp\ESET -name testurl.txt -value $orgLink -force
+    }
+}
