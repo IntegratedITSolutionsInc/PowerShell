@@ -473,7 +473,7 @@ function external-kaseya-push
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
-        Param ([string]$kaseyaLink=(read-host "Input the full URL for the Kaseya client to be installed.  Example: https://www.dropbox.com/s/o6q9bbe91jcsoa7/sccit_KcsSetup.exe?dl=1"))
+        [string]$kaseyaLink=(read-host "Input the full URL for the Kaseya client to be installed.  Example: https://www.dropbox.com/s/o6q9bbe91jcsoa7/sccit_KcsSetup.exe?dl=1")
 
     )
 
@@ -625,5 +625,65 @@ function Get-EsetLink
 
     # TEMPORARY; copy link to txt file for verification purposes.
     #New-Item -path C:\IITS_Mgmt\Temp\ESET -name testurl.txt -value $orgLink -force
+    }
+}
+
+<#
+.Synopsis
+   Gets the account used for all services
+.DESCRIPTION
+   Uses WMI to find the list of services and the accounts they are using to start.  Added description to aid in figuring out what it does.  The Output will be returned to the screen and can then be sent to a file. 
+.EXAMPLE
+   Get-ServiceAccount -ComputerName Computron -LogFile
+#>
+
+function Get-ServiceAccount
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        # Param1 help description
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        $ComputerName,
+
+        [switch][parameter(mandatory=$false, Position=1)] $LogFile
+    )
+
+    Begin
+    {
+        if(!$ComputerName)
+        {
+            $ComputerName=$env:COMPUTERNAME
+        }
+        Else
+        {
+        }
+    }
+    Process
+    {
+        $services = Get-WmiObject win32_service -ComputerName $ComputerName -ErrorAction Stop -ErrorVariable CurrentError
+        #$services = Get-CimInstance -ClassName CIM_Service -ComputerName $ComputerName -ErrorAction SilentlyContinue -ErrorVariable CurrentError
+        $services | Select-Object -Property SystemName, Name, StartName, ServiceType, Description | Format-Table
+    }
+    End
+    {
+        if($LogFile)
+        {
+            $ErrorLog = "$env:TEMP\ServiceAccount_IITS.txt"
+            if(!$CurrentError)
+            {
+                "$(Get-Date) - Error= NO ERROR." | Out-File -FilePath $ErrorLog -Force -Append
+            }
+            Else
+            {
+                "$(Get-Date) - Error= $CurrentError." | Out-File -FilePath $ErrorLog -Force -Append
+            }
+        }
+        Else
+        {
+        }
     }
 }
