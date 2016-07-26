@@ -622,9 +622,6 @@ function Get-EsetLink
     {
     # Print the container with the ESET link.
     return $orgLink
-
-    # TEMPORARY; copy link to txt file for verification purposes.
-    #New-Item -path C:\IITS_Mgmt\Temp\ESET -name testurl.txt -value $orgLink -force
     }
 }
 
