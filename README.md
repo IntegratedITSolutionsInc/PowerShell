@@ -10,6 +10,6 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-EsetLink|Antonio Vincentelli|
 |Get-KaseyaMachineID|Darren Khan|
 |Get-MailFlowStats|Darren Khan|
+|Get-ServiceAccount|Darren Khan|
 |hide-user-from-GAL|Michael Surtees|
 |Toggle-ActionCenter|Darren Khan|
-|Get-ServiceAccount|Darren Khan|

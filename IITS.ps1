@@ -1,4 +1,4 @@
-<#
+﻿<#
 .Synopsis
    This function will find the Kaseya Machine ID of the computer.  It will find the computer name if there is no kaseya agent installed.
 .DESCRIPTION
@@ -559,11 +559,11 @@ function hide-user-from-GAL
 .Synopsis
    Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
 .DESCRIPTION
-   Determine the root org (groupName) based on a given machine ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key ESETAgentKey.csv to get a Dropbox download link to a company-specific ESET Agent installer, then move the installer to the Kaseya agent Temp folder (C:\IITS_Mgmt\Temp\).
+   Determine the root org (groupName) based on a given machine ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
 .EXAMPLE
-   Get-EsetLink [-machName] sccit [-esetKey] C:\Key.csv
+   Get-EsetLink [-machName] my.machine.sccit
 .INPUTS
-   machName (string), esetKey (string)
+   machName (string)
 .OUTPUTS
    URL (string)
 .FUNCTIONALITY
@@ -592,15 +592,6 @@ function Get-EsetLink
         [ValidateNotNullOrEmpty()]
         [Alias("name","machine")] 
         [String]$machName,
-        
-        # The source location of the ESET key.
-        [Parameter(Mandatory=$true,
-                   Position=1,
-                   ParameterSetName='Parameter Set 1')]
-        [ValidateNotNull()]
-        [ValidateNotNullOrEmpty()]
-        [Alias('key','list','source')]
-        $esetKey
     )
     
     Begin
@@ -616,7 +607,7 @@ function Get-EsetLink
     Process
     {
     # Import the key and search for the group and OS architecture. Save the result to a container.
-    $orgLink = (Import-Csv $esetKey | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
+    $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
     }
     End
     {
