@@ -13,3 +13,4 @@ This file contains all of the functions that IITS distributes to all managed ser
 |hide-user-from-GAL|Michael Surtees|
 |Toggle-ActionCenter|Darren Khan|
 |Get-ServiceAccount|Darren Khan|
+|Get-InstalledPrograms|Darren Khan|

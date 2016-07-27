@@ -78,7 +78,7 @@ function Email-MSalarm
         try
         {
         $CurrentError = $null
-        $ErrorLog = "$env:TEMP\EmailMSalarm_IITS.txt"
+        $ErrorLog = "$env:windir\Temp\EmailMSalarm_IITS.txt"
         $key = Get-Content "C:\IITS_Scripts\Key.key" -ErrorAction Stop -ErrorVariable CurrentError
         $password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key -ErrorAction Stop -ErrorVariable CurrentError
         $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "forecast@integratedit.com",$password
@@ -161,7 +161,7 @@ function Toggle-ActionCenter
     {
         $regpath = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
         $namedword = "DisableNotificationCenter"
-        $output= "$env:temp\actioncenter_IITS.txt"
+        $output= "$env:windir\Temp\actioncenter_IITS.txt"
         if($Setting -eq "Enable")
         {
             $Status = 0
@@ -228,7 +228,7 @@ function Get-MailFlowStats
 
     Begin
     {
-        $file_path_csv = "$env:TEMP\Email_stats_$(get-date -f yyyyMMdd).csv"
+        $file_path_csv = "$env:windir\Temp\Email_stats_$(get-date -f yyyyMMdd).csv"
         $shouldemail = Read-Host -Prompt "Do you want to have the results emailed to you along with a CSV attachment? Enter 'Yes' if desired. If no email is required then output is .csv located at $file_path_csv"
         if($shouldemail -like "yes"){
         $office365 = Read-Host -Prompt "Do you want to send through Office 365? Enter Yes or No"
@@ -347,7 +347,7 @@ function Remove-AutoCorrect
     {
     try
     {
-        $ErrorLog= "$env:temp\disableautocorrectoutput_IITS.txt"
+        $ErrorLog= "$env:windir\Temp\disableautocorrectoutput_IITS.txt"
         $found=0
         $word = New-Object -ComObject word.application -ErrorAction Stop -ErrorVariable CurrentError
         $word.visible = $false
@@ -669,7 +669,7 @@ function Get-ServiceAccount
     {
         if($LogFile)
         {
-            $ErrorLog = "$env:TEMP\ServiceAccount_IITS.txt"
+            $ErrorLog = "$env:windir\Temp\ServiceAccount_IITS.txt"
             if(!$CurrentError)
             {
                 "$(Get-Date) - Error= NO ERROR." | Out-File -FilePath $ErrorLog -Force -Append
@@ -681,6 +681,80 @@ function Get-ServiceAccount
         }
         Else
         {
+        }
+    }
+}
+
+<#
+.Synopsis
+   This command will output a list of all of the install programs from the registry.
+.DESCRIPTION
+   This command will find the installed applications on any computer.  It will output the name and the uninstall string that can be used to remove the application.
+.EXAMPLE
+   Get-InstalledPrograms -ComputerName
+#>
+function Get-InstalledPrograms
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        # ComuputerName
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        $ComputerName,
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=1)]
+        [switch]
+        $ErrorLog
+    )
+
+    Begin
+    {
+        $errors = @()
+        $array = @()
+        $RegLocations = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\',
+                        'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\'
+        if(!$ComputerName)
+        {
+            $ComputerName=$env:COMPUTERNAME
+        }
+        Else
+        {
+        }
+    }
+    Process
+    {
+        $reg=[microsoft.win32.registrykey]::OpenRemoteBaseKey(‘LocalMachine’,$ComputerName)
+        foreach($RegLocation in $RegLocations)
+        {
+            $CurrentKey= $reg.opensubkey($RegLocation)
+            $subkeys = $CurrentKey.GetSubKeyNames()
+            foreach($subkey in $subkeys)
+            {
+                $Values = $reg.OpenSubKey("$RegLocation$subkey")
+                if($Values.GetValue('DisplayName'))
+                {
+                    $Prop=[ordered]@{
+                    'Display_Name'=$Values.GetValue('DisplayName')
+                    'Uninstall_Path'=$Values.GetValue('UninstallString')
+                    }
+                     $array += New-Object -TypeName psobject -Property $Prop -ErrorAction SilentlyContinue -ErrorVariable errors
+                } 
+            }
+        }
+        $array | Sort-Object -Property 'Display Name'
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\InstalledPrograms_IITS.txt"
+            foreach($error in $errors)
+            {
+                "$(Get-Date) - $error ." | Out-File -FilePath $LogPath -Force -Append
         }
     }
 }
