@@ -653,7 +653,6 @@ function Get-ServiceAccount
     Process
     {
         $services = Get-WmiObject win32_service -ComputerName $ComputerName -ErrorAction Stop -ErrorVariable CurrentError
-        #$services = Get-CimInstance -ClassName CIM_Service -ComputerName $ComputerName -ErrorAction SilentlyContinue -ErrorVariable CurrentError
         $services | Select-Object -Property SystemName, Name, StartName, ServiceType, Description | Format-Table
     }
     End
@@ -704,7 +703,7 @@ function Get-InstalledPrograms
 
     Begin
     {
-        $errors = @()
+        $booboos = @()
         $array = @()
         $RegLocations = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\',
                         'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\'
@@ -718,9 +717,11 @@ function Get-InstalledPrograms
     }
     Process
     {
-        $reg=[microsoft.win32.registrykey]::OpenRemoteBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,$ComputerName)
-        foreach($RegLocation in $RegLocations)
+        try
         {
+            $reg=[microsoft.win32.registrykey]::OpenRemoteBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,$ComputerName)
+            foreach($RegLocation in $RegLocations)
+            {
             $CurrentKey= $reg.opensubkey($RegLocation)
             $subkeys = $CurrentKey.GetSubKeyNames()
             foreach($subkey in $subkeys)
@@ -736,16 +737,111 @@ function Get-InstalledPrograms
                 } 
             }
         }
-        $array | Sort-Object -Property 'Display Name'
+            $array | Sort-Object -Property 'Display_Name'
+        }
+        catch
+        {
+            $booboos += $error
+        }
     }
     End
     {
         if($ErrorLog)
         {
             $LogPath = "$env:windir\Temp\InstalledPrograms_IITS.txt"
-            foreach($error in $errors)
+            foreach($booboo in $booboos)
             {
-                "$(Get-Date) - $error ." | Out-File -FilePath $LogPath -Force -Append
+                "$(Get-Date) - $booboo ." | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   This program will uninstall any application in ADD/Remove that matches the information entered.
+.DESCRIPTION
+   This program will remove an appliation with MSIEXEC if applicable.  If there is no msiexec uninstall string then it will attempt to use the uninstall path if there is one. There will be an output file located in the windows\temp folder.  
+.EXAMPLE
+   Remove-Application -UninstallPrograms Kaseya,Microsoft -ErrorLog
+#>
+function Remove-Application
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        # Param1 help description
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        [array]$UninstallPrograms,
+
+        [Parameter()]
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        [array]$booboos = @()
+        [array]$InstalledPrograms = Get-InstalledPrograms
+        if(!$UninstallPrograms)
+        {
+            $UninstallPrograms = Read-Host 'What program(s) would you like to uninstall?'
+        }
+    }
+    Process
+    {
+        try
+        {
+            foreach($program in $UninstallPrograms)
+            {
+                $progs = $InstalledPrograms | Where-Object {($_.Display_Name -match "$program")}
+                if($progs)
+                {
+                    foreach($prog in $progs)
+                    {    
+                        if($prog.Uninstall_Path)
+                        {
+                            if($prog.Uninstall_Path -match "msiexec.exe")
+                            {
+                                $removestring = $prog.Uninstall_Path -Replace "msiexec.exe","" -Replace "/I","" -Replace "/X",""
+                                $removestring = $removestring.Trim()
+                                $booboos += "$(Get-Date) - Removing $($prog.display_name) using $removestring."
+                                start-process "msiexec.exe" -arg "/X $removestring /qn" -Wait -ErrorAction SilentlyContinue
+                            }
+                            else
+                            {
+                                $booboos += "$(Get-Date) - Application $($prog.display_name) isn't using MSIEXEC for uninstall."
+                                start-process "cmd.exe" -arg "$($prog.Uninstall_Path)" -Wait -ErrorAction SilentlyContinue
+                            }
+                        }
+                        Else
+                        {
+                            $booboos += "$(Get-Date) - Application $($prog.Display_name) doesn't have an uninstall path."
+                        }
+                    }
+                }
+                else
+                {
+                    $booboos += "$(Get-Date) - Couldn't find application that matched $program."
+                }
+
+            }
+        }
+        catch
+        {
+            $booboos += $error
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\RemoveApplication_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
             }
         }
     }

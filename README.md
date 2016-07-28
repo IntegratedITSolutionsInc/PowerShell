@@ -13,6 +13,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-MailFlowStats|Darren Khan|
 |Get-ServiceAccount|Darren Khan|
 |hide-user-from-GAL|Michael Surtees|
+|Remove-Application|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
 
 
