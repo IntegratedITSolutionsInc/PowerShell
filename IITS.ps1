@@ -591,7 +591,7 @@ function Get-EsetLink
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
         [Alias("name","machine")] 
-        [String]$machName,
+        [String]$machName
     )
     
     Begin
@@ -718,7 +718,7 @@ function Get-InstalledPrograms
     }
     Process
     {
-        $reg=[microsoft.win32.registrykey]::OpenRemoteBaseKey(‘LocalMachine’,$ComputerName)
+        $reg=[microsoft.win32.registrykey]::OpenRemoteBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,$ComputerName)
         foreach($RegLocation in $RegLocations)
         {
             $CurrentKey= $reg.opensubkey($RegLocation)
@@ -746,6 +746,7 @@ function Get-InstalledPrograms
             foreach($error in $errors)
             {
                 "$(Get-Date) - $error ." | Out-File -FilePath $LogPath -Force -Append
+            }
         }
     }
 }
