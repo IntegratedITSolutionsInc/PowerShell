@@ -8,9 +8,11 @@ This file contains all of the functions that IITS distributes to all managed ser
 |external-kaseya-push|Michael Surtees|
 |get-app-version|Michael Surtees|
 |Get-EsetLink|Antonio Vincentelli|
+|Get-InstalledPrograms|Darren Khan|
 |Get-KaseyaMachineID|Darren Khan|
 |Get-MailFlowStats|Darren Khan|
+|Get-ServiceAccount|Darren Khan|
 |hide-user-from-GAL|Michael Surtees|
 |Toggle-ActionCenter|Darren Khan|
-|Get-ServiceAccount|Darren Khan|
-|Get-InstalledPrograms|Darren Khan|
+
+
