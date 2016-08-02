@@ -878,3 +878,138 @@ function Get-All-App-Versions
     {
     }
 }
+
+<#
+.Synopsis
+   Gathers crashplan log files from a computer and zips them up in a folder.
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Get-CrashPlanLogs "C:\IITS_MGMT\CrashPlan.zip" -ErrorLog
+#>
+function Get-CrashPlanLogs
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        $Output,
+        
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=1)]
+        [switch]$Errorlog
+    )
+
+    Begin
+    {
+        $booboos = @()
+        $CrashLogPath = "C:\ProgramData\CrashPlan\log"
+
+    }
+    Process
+    {
+        if(Test-Path $CrashLogPath)
+        {
+            Create-Zip -Source $CrashLogPath -Destination $Output
+            return $Output
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - CrashPlan log directory $CrashLogPath doesn't exist."
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\GetCrashPlanLogs_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   This command will zip a folder
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Create-Zip -Source "C:\Temp\Logs" -Destination "C:\Temp\Logs.zip" -Overwrite -Errorlog
+#>
+function Create-Zip
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        # Source Directory
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=0)]
+        $Source,
+
+        # Destination for Zip file
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=1)]
+        $Destination,
+
+        [Parameter(Mandatory=$false,
+                   ValueFromPipelineByPropertyName=$true,
+                   Position=2)]
+        [switch]$Overwrite,
+        [switch]$Errorlog
+    )
+
+    Begin
+    {
+        $Error = $null
+        $booboos = @()
+        if(!$Overwrite)
+        {
+            if(Test-Path $Destination)
+                {
+                    $Destination = "$($Destination).new"
+                    $booboos += "$(Get-Date) - File already exists.  Creation new file $Destination."
+                }
+        }
+        Else
+        {
+            if(test-path $Destination)
+            {
+                Remove-Item $Destination
+                $booboos += "$(Get-Date) - Removing previous file $Destination."
+            }
+        }
+    }
+    Process
+    {
+        Try
+        {
+        Add-Type -assembly "system.io.compression.filesystem" -ErrorAction Stop
+        [io.compression.zipfile]::CreateFromDirectory($Source, $Destination) 
+        }
+        Catch
+        {
+            $booboos += "$(Get-Date) - Couldn't load assembly.  Error = $Error"
+        }
+    }
+    End
+    {
+         if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\CreateZip_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
