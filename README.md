@@ -4,9 +4,11 @@ This file contains all of the functions that IITS distributes to all managed ser
 
 |Script|Author|
 |---|---|
+|Create-Zip|Darren Khan|
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
-|Get-App-Version|Michael Surtees|
+|Get-All-App-Versions|Michael Surtees|
+|Get-CrashPlanLogs|Darren Khan|
 |Get-EsetLink|Antonio Vincentelli|
 |Get-InstalledPrograms|Darren Khan|
 |Get-KaseyaMachineID|Darren Khan|
@@ -15,6 +17,6 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Hide-User-From-GAL|Michael Surtees|
 |Remove-Application|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
-|Get-All-App-Versions|Michael Surtees|
+
 
 
