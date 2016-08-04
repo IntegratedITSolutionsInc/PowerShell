@@ -18,5 +18,6 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Remove-Application|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
 |Find-If-Domain-Blacklisted|Michael Surtees|
+|Remove-Outlook-Automap|Michael Surtees|
 
 
