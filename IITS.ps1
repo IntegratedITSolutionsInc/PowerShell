@@ -1024,7 +1024,7 @@ function Create-Zip
 .EXAMPLE
    Another example of how to use this cmdlet
 #>
-function Verb-Noun
+function Find-If-Domain-Blacklisted
 {
     [CmdletBinding()]
     [Alias()]
