@@ -46,30 +46,19 @@ function Get-KaseyaMachineID
 .Synopsis
    This script emails MSAlarm@integratedit.com.
 .DESCRIPTION
-   This sciptneeds 2 parameters to work.  It requires a from address and the subject material.  An optional attachment parameter can be used if you wish to attach a file. 
+   This scipt needs 1 parameter to work.  It requires the subject.  An optional attachment parameter can be used if you wish to attach a file. 
 .EXAMPLE
-   Email-MSalarm -From "Dkhan@integratedit.com" -Body "This is my Email" -Attachment "C:\Foo.txt"
-.EXAMPLE
-   Another example of how to use this cmdlet
+   Email-MSalarm -Body "This is my Email" -Attachment "C:\Foo.txt"
 #>
 function Email-MSalarm
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
-        # Param1 help description
-        [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
-        $From,
-
-        # Param2 help description
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
         $Body,
-        #Field to enter attachment
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=2)]
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
         $Attachment
     )
 
@@ -96,10 +85,10 @@ function Email-MSalarm
                 {
             Try
                 {
-                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "
                     {Script}
         
-                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
                 }
             Catch
                 {
@@ -110,10 +99,10 @@ function Email-MSalarm
                 {
             Try
             {
-                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "
                 {Script}
         
-                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -ErrorAction Stop -ErrorVariable CurrentError
+                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError
             }
             Catch
             {
@@ -137,7 +126,7 @@ function Email-MSalarm
 .DESCRIPTION
    This function checks for the existence of the neccessary registry keys and will create the keys if needed.  Once they are created or verified to be there then it will change the appropriate dword based on user request
 .EXAMPLE
-   Example of how to use this cmdlet
+   Toggle-ActionCenter -Setting Enable
 .EXAMPLE
    Another example of how to use this cmdlet
 #>
@@ -1006,6 +995,230 @@ function Create-Zip
          if($ErrorLog)
         {
             $LogPath = "$env:windir\Temp\CreateZip_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   Will request a domain name and see if it's blacklisted
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Michael takes no credit for this code!
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Find-If-Domain-Blacklisted
+{
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([int])]
+    Param
+    (
+    )
+
+    Begin
+    {
+    }
+    Process
+    {
+    write-host "Stand by..."
+    $wc=New-Object net.webclient
+        #$IP =(Invoke-WebRequest ifconfig.me/ip).Content.Trim()
+        #$IP = $wc.downloadstring("http://ifconfig.me/ip") -replace "[^\d\.]"
+        Try {
+            $IP = $wc.downloadstring("http://checkip.dyndns.com") -replace "[^\d\.]"
+        }
+        Catch {
+            $IP = $wc.downloadstring("http://ifconfig.me/ip") -replace "[^\d\.]"
+        }
+        $IP = Read-Host -prompt "Enter a domain name to see if it's on a blacklist:"
+        Write-Host "Testing Public IP: $IP"
+        $reversedIP = ($IP -split '\.')[3..0] -join '.'
+ 
+        $blacklistServers = @(
+            'b.barracudacentral.org'
+            'spam.rbl.msrbl.net'
+            'zen.spamhaus.org'
+            'bl.deadbeef.com'
+            'bl.spamcannibal.org'
+            'bl.spamcop.net'
+            'blackholes.five-ten-sg.com'
+            'bogons.cymru.com'
+            'cbl.abuseat.org'
+            'combined.rbl.msrbl.net'
+            'db.wpbl.info'
+            'dnsbl-1.uceprotect.net'
+            'dnsbl-2.uceprotect.net'
+            'dnsbl-3.uceprotect.net'
+            'dnsbl.cyberlogic.net'
+            'dnsbl.sorbs.net'
+            'duinv.aupads.org'
+            'dul.dnsbl.sorbs.net'
+            'dyna.spamrats.com'
+            'dynip.rothen.com'
+            'http.dnsbl.sorbs.net'
+            'images.rbl.msrbl.net'
+            'ips.backscatterer.org'
+            'misc.dnsbl.sorbs.net'
+            'noptr.spamrats.com'
+            'orvedb.aupads.org'
+            'pbl.spamhaus.org'
+            'phishing.rbl.msrbl.net'
+            'psbl.surriel.com'
+            'rbl.interserver.net'
+            'relays.nether.net'
+            'sbl.spamhaus.org'
+            'smtp.dnsbl.sorbs.net'
+            'socks.dnsbl.sorbs.net'
+            'spam.dnsbl.sorbs.net'
+            'spam.spamrats.com'
+            't3direct.dnsbl.net.au'
+            'tor.ahbl.org'
+            'ubl.lashback.com'
+            'ubl.unsubscore.com'
+            'virus.rbl.msrbl.net'
+            'web.dnsbl.sorbs.net'
+            'xbl.spamhaus.org'
+            'zombie.dnsbl.sorbs.net'
+            'hostkarma.junkemailfilter.com'
+        )
+ 
+        $blacklistedOn = @()
+ 
+        foreach ($server in $blacklistServers)
+        {
+            $fqdn = "$reversedIP.$server"
+            #Write-Host "Testing Reverse: $fqdn"
+            try
+            {
+              #Write-Host "Trying Blacklist: $server"
+                $result = [System.Net.Dns]::GetHostEntry($fqdn)
+             foreach ($addr in $result.AddressList) {
+              $line = $Addr.IPAddressToString
+             } 
+            #IPAddress[] $addr = $result.AddressList;
+                #$addr[$addr.Length-1].ToString();
+            #Write-Host "Blacklist Result: $line"
+            if ($line -eq "127.0.0.1") {
+                    $blacklistedOn += $server
+            }
+            }
+            catch { }
+        }
+ 
+        if ($blacklistedOn.Count -gt 0)
+        {
+            # The IP was blacklisted on one or more servers; send your email here.  $blacklistedOn is an array of the servers that returned positive results.
+            Write-Host "$IP was blacklisted on one or more Lists: $($blacklistedOn -join ', ')"
+            Exit 1010
+        }
+        else
+        {
+            Write-Host "$IP is not currently blacklisted on any lists checked."
+           
+        }
+ 
+    }
+    End
+    {
+    }
+}
+
+<#
+.Synopsis
+   Remove's another user's folder/calendar from automap
+.DESCRIPTION
+   If a user is assigned, or has been, permissions to another user's calendar or mailbox, 365 automatically maps it
+   in the user's Outlook.  This will turn off the automap
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Remove-Outlook-Automap
+{
+
+    Begin {
+
+        #Connect to client's 365
+         $LiveCred = Get-Credential
+         Import-Module msonline; Connect-MsolService -Credential $livecred
+         $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://ps.outlook.com/powershell/?proxymethod=rps -Credential $LiveCred -Authentication Basic -AllowRedirection
+         Import-PSSession $Session
+           }
+
+
+    Process {
+            $owner=read-host "Enter Owner's email address:"
+            $requestor=read-host "Enter email address of person to remove Automapping from:"
+            Add-MailboxPermission -Identity $owner -User $requestor -AccessRights FullAccess -AutoMapping:$false
+            }
+}
+
+<#
+.Synopsis
+   This cmdlet will return the current filesystem drives as an object
+.DESCRIPTION
+   This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an ohject
+.EXAMPLE
+   Get-DriveStatistics -ErrorLog
+#>
+function Get-DriveStatistics
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos=@()
+        $Error = $null
+        try
+        {
+            $volumes = Get-PSDrive | Where-Object {$_.Provider -match 'Filesystem'}
+        }
+        catch
+        {
+            $booboos += "$(Get-Date) - Couldn't get drive list."
+        }
+    }
+    Process
+    {
+        $report=@()
+        if(!$booboos)
+        {
+            foreach($volume in $volumes)
+            {
+                $Prop=
+                [ordered]@{
+                'Name'=$volume.Name
+                'Drive'=$volume.root
+                'UsedSpace'=[System.Math]::Round($($volume.used / 1GB), 2)
+                'FreeSpace'=[System.Math]::Round($($volume.free / 1GB) ,2)
+                'TotalSpace'=[System.Math]::Round($($volume.used /1gb + $volume.free/1gb), 2)
+                }
+                $report += New-Object -TypeName psobject -Property $Prop   
+            }
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Skipping process block due to not having volumes."
+        }
+        return $report | Format-Table
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DriveStatistics_IITS.txt"
             foreach($booboo in $booboos)
             {
                 "$booboo" | Out-File -FilePath $LogPath -Force -Append
