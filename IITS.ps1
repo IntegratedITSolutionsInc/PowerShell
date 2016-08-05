@@ -1031,8 +1031,6 @@ function Find-If-Domain-Blacklisted
     [OutputType([int])]
     Param
     (
-        
-
     )
 
     Begin
@@ -1172,4 +1170,70 @@ function Remove-Outlook-Automap
             $requestor=read-host "Enter email address of person to remove Automapping from:"
             Add-MailboxPermission -Identity $owner -User $requestor -AccessRights FullAccess -AutoMapping:$false
             }
+}
+
+<#
+.Synopsis
+   This cmdlet will return the current filesystem drives as an object
+.DESCRIPTION
+   This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an ohject
+.EXAMPLE
+   Get-DriveStatistics -ErrorLog
+#>
+function Get-DriveStatistics
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos=@()
+        $Error = $null
+        try
+        {
+            $volumes = Get-PSDrive | Where-Object {$_.Provider -match 'Filesystem'}
+        }
+        catch
+        {
+            $booboos += "$(Get-Date) - Couldn't get drive list."
+        }
+    }
+    Process
+    {
+        $report=@()
+        if(!$booboos)
+        {
+            foreach($volume in $volumes)
+            {
+                $Prop=
+                [ordered]@{
+                'Name'=$volume.Name
+                'Drive'=$volume.root
+                'UsedSpace'=[System.Math]::Round($($volume.used / 1GB), 2)
+                'FreeSpace'=[System.Math]::Round($($volume.free / 1GB) ,2)
+                'TotalSpace'=[System.Math]::Round($($volume.used /1gb + $volume.free/1gb), 2)
+                }
+                $report += New-Object -TypeName psobject -Property $Prop   
+            }
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Skipping process block due to not having volumes."
+        }
+        return $report | Format-Table
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DriveStatistics_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
 }
