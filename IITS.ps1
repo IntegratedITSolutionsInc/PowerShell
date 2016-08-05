@@ -53,8 +53,6 @@ function Get-KaseyaMachineID
 function Email-MSalarm
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
@@ -90,7 +88,7 @@ function Email-MSalarm
                     Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
                     {Script}
         
-                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
                 }
             Catch
                 {
@@ -101,7 +99,7 @@ function Email-MSalarm
                 {
             Try
             {
-                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script" -body "
                 {Script}
         
                 $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError
@@ -128,7 +126,7 @@ function Email-MSalarm
 .DESCRIPTION
    This function checks for the existence of the neccessary registry keys and will create the keys if needed.  Once they are created or verified to be there then it will change the appropriate dword based on user request
 .EXAMPLE
-   Example of how to use this cmdlet
+   Toggle-ActionCenter -Setting Enable
 .EXAMPLE
    Another example of how to use this cmdlet
 #>
