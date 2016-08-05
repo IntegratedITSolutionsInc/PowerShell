@@ -46,30 +46,19 @@ function Get-KaseyaMachineID
 .Synopsis
    This script emails MSAlarm@integratedit.com.
 .DESCRIPTION
-   This sciptneeds 2 parameters to work.  It requires a from address and the subject material.  An optional attachment parameter can be used if you wish to attach a file. 
+   This scipt needs 1 parameter to work.  It requires the subject.  An optional attachment parameter can be used if you wish to attach a file. 
 .EXAMPLE
-   Email-MSalarm -From "Dkhan@integratedit.com" -Body "This is my Email" -Attachment "C:\Foo.txt"
-.EXAMPLE
-   Another example of how to use this cmdlet
+   Email-MSalarm -Body "This is my Email" -Attachment "C:\Foo.txt"
 #>
 function Email-MSalarm
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
-        # Param1 help description
-        [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
-        $From,
-
-        # Param2 help description
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
         $Body,
-        #Field to enter attachment
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=2)]
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
         $Attachment
     )
 
@@ -96,10 +85,10 @@ function Email-MSalarm
                 {
             Try
                 {
-                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "
                     {Script}
         
-                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
                 }
             Catch
                 {
@@ -110,10 +99,10 @@ function Email-MSalarm
                 {
             Try
             {
-                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "
                 {Script}
         
-                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -ErrorAction Stop -ErrorVariable CurrentError
+                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError
             }
             Catch
             {
@@ -137,7 +126,7 @@ function Email-MSalarm
 .DESCRIPTION
    This function checks for the existence of the neccessary registry keys and will create the keys if needed.  Once they are created or verified to be there then it will change the appropriate dword based on user request
 .EXAMPLE
-   Example of how to use this cmdlet
+   Toggle-ActionCenter -Setting Enable
 .EXAMPLE
    Another example of how to use this cmdlet
 #>
