@@ -1212,13 +1212,113 @@ function Get-DriveStatistics
         {
             $booboos += "$(Get-Date) - Skipping process block due to not having volumes."
         }
-        return $report | Format-Table
+        return $report
     }
     End
     {
         if($ErrorLog)
         {
             $LogPath = "$env:windir\Temp\DriveStatistics_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   This function will export a csv file to C:\IITS_Scripts\DiskInformation that contains disk information.  There will be one file created for each volume including removable drives.
+.DESCRIPTION
+   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  This is all calculated using the used space of the drive.  There is an error log 
+.EXAMPLE
+   Get-DiskChanges -ErrorLog
+#>
+function Get-DiskChanges
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        Try
+        {
+            $booboos = @()
+            $import = @()
+            $volumes = Get-DriveStatistics
+        }
+        Catch
+        {
+            $booboos += "$(Get-Date) - Couldn't get drive lists."
+        }
+    }
+    Process
+    {
+        if(!$booboos)
+        {
+            Foreach($volume in $volumes)
+            {
+                if(Test-Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv")
+                {
+                    $import += Import-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv"
+                    $booboos += "$(Get-Date) - Importing old drive informationfor $($volume.name)."
+                    $import += $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date", "Time"
+                    $booboos += "$(Get-Date) - Appending new drive information for $($volume.name)."
+                    if($import.count -ge 2)
+                    {
+                        $new = $import[-1]
+                        $old = $import[-2]
+                        $new.ChangeGBUsed = $old.UsedSpace - $new.UsedSpace
+                        if($old.UsedSpace -eq 0)
+                        {
+                            $booboos += "$(Get-Date) - No Change for $($volume.name)."
+                            $new.ChangeRatePercentUsed = 0
+                        }
+                        Else
+                        {
+                            $new.ChangeRatePercentUsed = ((($new.UsedSpace - $old.UsedSpace)/($old.UsedSpace))*100)
+                        }
+                    }
+                    Else
+                    {
+                        $booboos += "$(Get-Date) - Only one entry for $($volume.name)."
+                    }
+                    $new.date =  Get-Date -Format d
+                    $new.time =  Get-Date -Format T
+                    $booboos += "$(Get-Date) - Outputting new drive information to existing CSV for $($volume.name)."
+                    $new | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                }
+                Else
+                {
+                    $booboos += "$(Get-Date) - Creating CSV for $($volume.name)."
+                    $export = $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date" , "Time"
+                    $export.date =  Get-Date -Format d
+                    $export.time =  Get-Date -Format T
+                    $export.ChangeGBUsed = 0
+                    $export.ChangeRatePercentUsed = 0
+                    try
+                    {
+                        New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error
+                    }
+                    Catch
+                    {
+                        $booboos += "$(Get-Date) - Error creating DiskInformation folder. Error = $error"
+                    }
+                    $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                }
+            }
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DiskChanges_IITS.txt"
             foreach($booboo in $booboos)
             {
                 "$booboo" | Out-File -FilePath $LogPath -Force -Append
