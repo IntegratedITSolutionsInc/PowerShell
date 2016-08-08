@@ -1163,7 +1163,7 @@ function Remove-Outlook-Automap
 
 <#
 .Synopsis
-   This cmdlet will return the current filesystem drives as an object
+   This cmdlet will return the current filesystem drives as an object that are drivetype of 3 according to it's WMI object. 
 .DESCRIPTION
    This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an ohject
 .EXAMPLE
@@ -1180,20 +1180,43 @@ function Get-DriveStatistics
     Begin
     {
         $booboos=@()
-        $Error = $null
+        $error = $null
+        $volumes = @()
+        $drives = @()
         try
         {
-            $volumes = Get-PSDrive | Where-Object {$_.Provider -match 'Filesystem'}
+            $drives = Get-PSDrive | Where-Object {$_.Provider -match 'Filesystem'}
+            $booboos += "$(Get-Date) - Obtained volumes."
+            $fixeddisks = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3"
+            $booboos += "$(Get-Date) - Obtained WMI Objects"
+            foreach($drive in $drives)
+            {
+                $booboos += "$(Get-Date) - Comparing $($drive.root)."
+                foreach($fixeddisk in $fixeddisks)
+                {
+                    $booboos += "$(Get-Date) - Comparing $($drive.root) with $($fixeddisk.deviceid)\."
+                    if($drive.root -notlike "$($fixeddisk.DeviceID)\")
+                    {
+                        $booboos += "$(Get-Date) - Not adding $($drive.root) to volumes array)."
+                    }
+                    else
+                    {
+                        $booboos += "$(Get-Date) - Adding $($drive.root) to volumes array."
+                        $volumes += $drive
+                    }
+                }
+            }
         }
         catch
         {
-            $booboos += "$(Get-Date) - Couldn't get drive list."
+            $error += "$(Get-Date) - Couldn't get drive list."
+            $booboos += $error
         }
     }
     Process
     {
         $report=@()
-        if(!$booboos)
+        if(!$error)
         {
             foreach($volume in $volumes)
             {
@@ -1207,12 +1230,12 @@ function Get-DriveStatistics
                 }
                 $report += New-Object -TypeName psobject -Property $Prop   
             }
+            return $report
         }
         else
         {
             $booboos += "$(Get-Date) - Skipping process block due to not having volumes."
         }
-        return $report
     }
     End
     {
