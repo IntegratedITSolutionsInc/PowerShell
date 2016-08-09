@@ -590,7 +590,7 @@ function Get-EsetLink
     [Int]$machOS=$matches[0]
     
     # RegEx the machine name to extract the group name.
-    $machName -match '\w+$' | Out-Null
+    $machName -match '[\w-]+$' | Out-Null
     [String]$groupName = $matches[0]
     }
     Process
