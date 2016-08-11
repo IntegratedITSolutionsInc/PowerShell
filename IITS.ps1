@@ -46,30 +46,19 @@ function Get-KaseyaMachineID
 .Synopsis
    This script emails MSAlarm@integratedit.com.
 .DESCRIPTION
-   This sciptneeds 2 parameters to work.  It requires a from address and the subject material.  An optional attachment parameter can be used if you wish to attach a file. 
+   This scipt needs 1 parameter to work.  It requires the subject.  An optional attachment parameter can be used if you wish to attach a file. 
 .EXAMPLE
-   Email-MSalarm -From "Dkhan@integratedit.com" -Body "This is my Email" -Attachment "C:\Foo.txt"
-.EXAMPLE
-   Another example of how to use this cmdlet
+   Email-MSalarm -Body "This is my Email" -Attachment "C:\Foo.txt"
 #>
 function Email-MSalarm
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
-        # Param1 help description
-        [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
-        $From,
-
-        # Param2 help description
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
         $Body,
-        #Field to enter attachment
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=2)]
+
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
         $Attachment
     )
 
@@ -96,10 +85,10 @@ function Email-MSalarm
                 {
             Try
                 {
-                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "
                     {Script}
         
-                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
                 }
             Catch
                 {
@@ -110,10 +99,10 @@ function Email-MSalarm
                 {
             Try
             {
-                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed form Powershell Script" -body "
+                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "
                 {Script}
         
-                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From $From -ErrorAction Stop -ErrorVariable CurrentError
+                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError
             }
             Catch
             {
@@ -137,7 +126,7 @@ function Email-MSalarm
 .DESCRIPTION
    This function checks for the existence of the neccessary registry keys and will create the keys if needed.  Once they are created or verified to be there then it will change the appropriate dword based on user request
 .EXAMPLE
-   Example of how to use this cmdlet
+   Toggle-ActionCenter -Setting Enable
 .EXAMPLE
    Another example of how to use this cmdlet
 #>
@@ -601,7 +590,7 @@ function Get-EsetLink
     [Int]$machOS=$matches[0]
     
     # RegEx the machine name to extract the group name.
-    $machName -match '\w+$' | Out-Null
+    $machName -match '[\w-]+$' | Out-Null
     [String]$groupName = $matches[0]
     }
     Process
@@ -1031,8 +1020,6 @@ function Find-If-Domain-Blacklisted
     [OutputType([int])]
     Param
     (
-        
-
     )
 
     Begin
@@ -1172,4 +1159,194 @@ function Remove-Outlook-Automap
             $requestor=read-host "Enter email address of person to remove Automapping from:"
             Add-MailboxPermission -Identity $owner -User $requestor -AccessRights FullAccess -AutoMapping:$false
             }
+}
+
+<#
+.Synopsis
+   This cmdlet will return the current filesystem drives as an object that are drivetype of 3 according to it's WMI object. 
+.DESCRIPTION
+   This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an object to use in any way needed.
+.EXAMPLE
+   Get-DriveStatistics -ErrorLog
+#>
+function Get-DriveStatistics
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos=@()
+        $error = $null
+        $volumes = @()
+        $drives = @()
+        try
+        {
+            $drives = Get-PSDrive | Where-Object {$_.Provider -match 'Filesystem'}
+            $booboos += "$(Get-Date) - Obtained volumes."
+            $fixeddisks = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3"
+            $booboos += "$(Get-Date) - Obtained WMI Objects"
+            #the next block of code will compare the drives found in get-psdrive to the drives found with get-wmiobject.  If they match then that is a drive to use.  If they don't match then it isn't a local disk and will be tossed aside.  This script block can be modified (in a new function) to compare any of the parameteres in PSDrive and WMIObject Logical Disk. 
+            foreach($drive in $drives)
+            {
+                $booboos += "$(Get-Date) - Comparing $($drive.root)."
+                foreach($fixeddisk in $fixeddisks)
+                {
+                    $booboos += "$(Get-Date) - Comparing $($drive.root) with $($fixeddisk.deviceid)\."
+                    if($drive.root -notlike "$($fixeddisk.DeviceID)\")
+                    {
+                        $booboos += "$(Get-Date) - Not adding $($drive.root) to volumes array)."
+                    }
+                    else
+                    {
+                        $booboos += "$(Get-Date) - Adding $($drive.root) to volumes array."
+                        $volumes += $drive
+                    }
+                }
+            }
+        }
+        catch
+        {
+            $error += "$(Get-Date) - Couldn't get drive list."
+            $booboos += $error
+        }
+    }
+    Process
+    {
+        $report=@()
+        if(!$error)
+        {
+            foreach($volume in $volumes)
+            {
+                $Prop=
+                [ordered]@{
+                'Name'=$volume.Name
+                'Drive'=$volume.root
+                'UsedSpace'=[System.Math]::Round($($volume.used / 1GB), 2)
+                'FreeSpace'=[System.Math]::Round($($volume.free / 1GB) ,2)
+                'TotalSpace'=[System.Math]::Round($($volume.used /1gb + $volume.free/1gb), 2)
+                }
+                $report += New-Object -TypeName psobject -Property $Prop   
+            }
+            return $report
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Skipping process block due to not having volumes."
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DriveStatistics_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   This function will export a csv file to C:\IITS_Scripts\DiskInformation that contains disk information.  There will be one file created for each volume including removable drives.
+.DESCRIPTION
+   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  This is all calculated using the used space of the drive.  There is an error log that is stored in the windows temp file directory. 
+.EXAMPLE
+   Get-DiskChanges -ErrorLog
+#>
+function Get-DiskChanges
+{
+    [CmdletBinding()]
+    [Alias()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        Try
+        {
+            $booboos = @()
+            $import = @()
+            $volumes = Get-DriveStatistics
+        }
+        Catch
+        {
+            $booboos += "$(Get-Date) - Couldn't get drive lists."
+        }
+    }
+    Process
+    {
+        if(!$booboos)
+        {
+            Foreach($volume in $volumes)
+            {
+                if(Test-Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv")
+                {
+                    $import += Import-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv"
+                    $booboos += "$(Get-Date) - Importing old drive informationfor $($volume.name)."
+                    $import += $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date", "Time"
+                    $booboos += "$(Get-Date) - Appending new drive information for $($volume.name)."
+                    if($import.count -ge 2)
+                    {
+                        $new = $import[-1]
+                        $old = $import[-2]
+                        $new.ChangeGBUsed = $old.UsedSpace - $new.UsedSpace
+                        if($old.UsedSpace -eq 0)
+                        {
+                            $booboos += "$(Get-Date) - No Change for $($volume.name)."
+                            $new.ChangeRatePercentUsed = 0
+                        }
+                        Else
+                        {
+                            $new.ChangeRatePercentUsed = ((($new.UsedSpace - $old.UsedSpace)/($old.UsedSpace))*100)
+                        }
+                    }
+                    Else
+                    {
+                        $booboos += "$(Get-Date) - Only one entry for $($volume.name)."
+                    }
+                    $new.date =  Get-Date -Format d
+                    $new.time =  Get-Date -Format T
+                    $booboos += "$(Get-Date) - Outputting new drive information to existing CSV for $($volume.name)."
+                    $new | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                }
+                Else
+                {
+                    $booboos += "$(Get-Date) - Creating CSV for $($volume.name)."
+                    $export = $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date" , "Time"
+                    $export.date =  Get-Date -Format d
+                    $export.time =  Get-Date -Format T
+                    $export.ChangeGBUsed = 0
+                    $export.ChangeRatePercentUsed = 0
+                    try
+                    {
+                        New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error | Out-Null
+                    }
+                    Catch
+                    {
+                        $booboos += "$(Get-Date) - Error creating DiskInformation folder. Error = $error"
+                    }
+                    $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                }
+            }
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DiskChanges_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
 }
