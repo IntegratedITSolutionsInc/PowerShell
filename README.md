@@ -4,6 +4,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 
 |Script|Author|
 |---|---|
+|Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
