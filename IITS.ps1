@@ -590,7 +590,7 @@ function Get-EsetLink
     [Int]$machOS=$matches[0]
     
     # RegEx the machine name to extract the group name.
-    $machName -match '\w+$' | Out-Null
+    $machName -match '[\w-]+$' | Out-Null
     [String]$groupName = $matches[0]
     }
     Process
@@ -1165,7 +1165,7 @@ function Remove-Outlook-Automap
 .Synopsis
    This cmdlet will return the current filesystem drives as an object that are drivetype of 3 according to it's WMI object. 
 .DESCRIPTION
-   This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an ohject
+   This cmdlet gets all of the drives that are marked as filesystem drives and returns them as an object to use in any way needed.
 .EXAMPLE
    Get-DriveStatistics -ErrorLog
 #>
@@ -1189,6 +1189,7 @@ function Get-DriveStatistics
             $booboos += "$(Get-Date) - Obtained volumes."
             $fixeddisks = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType=3"
             $booboos += "$(Get-Date) - Obtained WMI Objects"
+            #the next block of code will compare the drives found in get-psdrive to the drives found with get-wmiobject.  If they match then that is a drive to use.  If they don't match then it isn't a local disk and will be tossed aside.  This script block can be modified (in a new function) to compare any of the parameteres in PSDrive and WMIObject Logical Disk. 
             foreach($drive in $drives)
             {
                 $booboos += "$(Get-Date) - Comparing $($drive.root)."
@@ -1254,7 +1255,7 @@ function Get-DriveStatistics
 .Synopsis
    This function will export a csv file to C:\IITS_Scripts\DiskInformation that contains disk information.  There will be one file created for each volume including removable drives.
 .DESCRIPTION
-   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  This is all calculated using the used space of the drive.  There is an error log 
+   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  This is all calculated using the used space of the drive.  There is an error log that is stored in the windows temp file directory. 
 .EXAMPLE
    Get-DiskChanges -ErrorLog
 #>
@@ -1326,7 +1327,7 @@ function Get-DiskChanges
                     $export.ChangeRatePercentUsed = 0
                     try
                     {
-                        New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error
+                        New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error | Out-Null
                     }
                     Catch
                     {
