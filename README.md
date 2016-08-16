@@ -1,7 +1,6 @@
 
 This file contains all of the functions that IITS distributes to all managed services machines. The current list of command available are:
 |Script|Author|
-
 |---|---|
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|

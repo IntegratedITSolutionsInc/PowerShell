@@ -1385,7 +1385,7 @@ function Check-PSVersion
     }
     else {return $false}
 }
-}
+
 <#
 .Synopsis
    This function Calculate the projection of how much space is left and in how much time the space will exhaust
