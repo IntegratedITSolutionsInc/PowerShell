@@ -1414,3 +1414,78 @@ function Get-Projection {
                
         }
     }
+
+<#
+.Synopsis
+   This function will output the size of the VSS store on a machine for all volumes. 
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Get-VSSStatistics
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos = @()
+        $errors = $null
+        try
+        {
+            $Volumes = Get-WmiObject -Class Win32_Volume -ErrorAction Stop -ErrorVariable errors
+            $ShadowStorageObjects = Get-WmiObject -Class Win32_ShadowStorage -ErrorAction Stop -ErrorVariable errors
+        }
+        Catch [System.Management.ManagementException]
+        {
+            $booboos += "$(Get-Date) - Need to run script as administrator. ERROR = $errors."
+        }
+        Catch
+        {
+            $booboos += "$(Get-Date) - Something went wrong with getting WMIObjects."
+        }
+        [array]$report = @()
+    }
+    Process
+    {
+        foreach($ShadowStorageObject in $ShadowStorageObjects)
+        {
+            foreach($Volume in $Volumes)
+            {
+                If($ShadowStorageObject.volume -eq $Volume.__RELPATH)
+                {
+                    $Prop=
+                    [ordered]@{
+                    'Drive'=$volume.driveletter
+                    'AllocatedSpaceGB' = [System.Math]::Round(($ShadowStorageObject.AllocatedSpace /1GB), 3)
+                    'UsedSpaceGB'=[System.Math]::Round(($ShadowStorageObject.usedspace /1GB), 3)
+                    'MaxSpaceGB'= [System.Math]::Round(($ShadowStorageObject.maxspace /1GB), 3)
+                    }
+                    $report += New-Object -TypeName psobject -Property $Prop  
+                }
+                else
+                {
+                    Write-host "$($ShadowStorageObject.volume) didn't match $($Volume.__RELPATH)"
+                }
+            }
+        }
+        return $report | Format-Table
+     }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\VSSStatistics_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
