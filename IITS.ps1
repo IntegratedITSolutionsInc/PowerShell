@@ -1350,6 +1350,43 @@ function Get-DiskChanges
         }
     }
 }
+}
+
+<#
+.Synopsis
+   Checks for outdated PowerShell version and returns True if it is. Option to e-mail MSAlarm on True.
+.DESCRIPTION
+   Checks the installed PowerShell version (Major) and sees if it's less than 3. If so, it returns True. If the ticket switch is enabled, it also e-mails MSAlarm with a request to update it.
+.EXAMPLE
+   Check-PSVersion
+.EXAMPLE
+   Check-PSVersion -ticket
+.INPUTS
+   No inputs, optional 'ticket' switch.
+.OUTPUTS
+   Boolean. If 'ticket' switch called, also sends an e-mail.
+#>
+
+function Check-PSVersion
+{
+    Param
+    (
+        # Switch parameter; call to send e-mail to MSAlarm, which will make a ticket.
+        [Switch]$ticket
+    )
+    
+    if ($PSVersionTable.PSVersion.Major -lt 3)
+    {
+        return $true
+        if ($ticket)
+        {
+            $id = Get-KaseyaMachineID
+            Email-MSalarm -Body "$id needs a PowerShell upgrade."
+        }
+    }
+    else {return $false}
+}
+
 <#
 .Synopsis
    This function Calculate the projection of how much space is left and in how much time the space will exhaust
