@@ -2,6 +2,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 
 |Script|Author|
 |---|---|
+|Add-iVantage-User|Michael Surtees|
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|
 |Disable-365-Account|Michael Surtees|
