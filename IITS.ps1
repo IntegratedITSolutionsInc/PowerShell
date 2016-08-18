@@ -1429,71 +1429,6 @@ function Check-PSVersion
 
 <#
 .Synopsis
-   This function Calculate the projection of how much space is left and in how much time the space will exhaust
-.DESCRIPTION
-   This function will calculate the projection of disk of space changed
-.EXAMPLE
-   #>
-
-function Get-Projection {
-    <# checks if the log file exist, if it does not exist then runs the code in the else statement #>
-    $logfile = 'C:\IITS_Mgmt\Temp\DiskInformation\logs.txt'
-    $date = Get-Date
-    $testlogfile = Test-Path $logfile
-        if ($testlogfile -eq $true) {
-        Add-Content $logfile "logs on $date"
-        }
-        else {
-        New-Item -Path 'C:\IITS_Mgmt\Temp' -ItemType 'Directory' -Name 'DiskInformation'
-        New-Item -Path 'C:\IITS_Mgmt\Temp\DiskInformation' -ItemType 'file' -Name 'logs.txt'
-        Add-Content $logfile "This is where we collect logs for Disk Usage"
-        }
-        <# Gets the csv files in the DiskInformation folder #>   
-        $csv = Get-ChildItem C:\IITS_Scripts\DiskInformation -Filter *.csv
-        <# $c is the csv file for each volume #>
-        ForEach ($c in $csv) {
-        <# each volumes csv file is made into an object #>
-        $a = Import-csv C:\IITS_Scripts\DiskInformation\$c
-        <# This is the average of the ChangeGBUsed column in the csv for each volume #>
-        $totalused = ($a.ChangeGBUsed | Measure-Object -Sum).Sum
-        <# total size of the volume at the time script is run #>
-        $Size = ($a.TotalSpace | Measure-Object -Maximum).Maximum
-        $machine = Get-KaseyaMachineID
-        <# all the points data is collected for #>
-        $countall = $a.count
-        <# 1 less than the total count to be used in the next step to get the latest freespace #>
-        $count = $a.count-1
-        $drive = $a.name[$count]
-        $freespace = $a.freespace[$count]
-            <# if average used is NOT IN NEGATIVE #>
-            if ($totalused -gt 0.00) {
-            <# gets the current time with the last time and date entry in the sheet #>
-            $currtime = $a.date[$count]+" "+$a.time[$count]
-            <# start entry - start time #>
-            $starttime = $a.date[0]+" "+$a.time[0]
-            <# Calculates the Time Difference #>
-            $timediff = [math]::Round(([datetime]$currtime - [datetime]$starttime).TotalDays,2)
-            $dailyused = $totalused / $timediff
-            $projusedays = [math]::Round(($freespace / $dailyused),2)
-                    if ($projusedays -le 30 ) {
-                    <# Add-Content $logfile "on the $drive drive, we have estimated that the free space of $freespace GB will exhaust in $projhr which is $projweeks WEEKS" #>
-                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c
-                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in 30 days "
-                    }
-                    else {
-                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, space will not exhaust in 30 days "
-                    }
-             }
-             <# If average used is a negative #>
-            else {
-             Add-Content $logfile "The average space used for $drive DRIVE is $totalused GB."
-            }
-               
-        }
-    }
-
-<#
-.Synopsis
    This function will output the size of the VSS store on a machine for all volumes that have shadow volume usage. THIS NEEDS TO BE RUN AS WITH ADMINISTATIVE ACCESS!
 .DESCRIPTION
    This function gathers all volumes according to the wwin32_volume class as well as the volumes as reported by win32_shadowstorage class.  It will compare the 2 and weed out any volumes that do not have used vss space.  It will then output the results in a custom object.
@@ -1568,3 +1503,87 @@ function Get-VSSStatistics
         }
     }
 }
+
+<#
+.Synopsis
+   This function calculates the projected number of days in which the free space on Non-Removable drive will be used completely. If the space will be used in less than 30 days it will send an e-mail.
+   .DESCRIPTION
+   This function collects the .csv files for each of the drives located in the C:\IITS_Scripts\DiskInformation folder. Based on the total used space, free size and the number of days 
+   the data is collected for it calculates the rate of change for a single day. It then projects the number of days in which the free space will be used completely.
+   The script does not have any parameter, however it does use 2 other functions : Get-KaseyaMachineID and Email-MSAlarm.
+   .EXAMPLE
+Get-Projection
+   #>
+
+function Get-Projection {
+    <# LOG FILE is created to output the information to.Log file exists at  C:\IITS_Mgmt\Temp\DiskInformation\logs.txt
+    checks if the log file exist in the first if block, if it exists it adds a general comment , if it does not exist then runs the code in the else statement where 
+    it makes the DiskInformation folder and the logs.txt file  #>
+    $logfile = 'C:\IITS_Mgmt\Temp\DiskInformation\logs.txt'
+    $date = Get-Date
+    $testlogfile = Test-Path $logfile
+        if ($testlogfile -eq $true) {
+        Add-Content $logfile "logs on $date"
+        }
+        else {
+        New-Item -Path 'C:\IITS_Mgmt\Temp' -ItemType 'Directory' -Name 'DiskInformation'
+        New-Item -Path 'C:\IITS_Mgmt\Temp\DiskInformation' -ItemType 'file' -Name 'logs.txt'
+        Add-Content $logfile "This is where we collect logs for Disk Usage"
+        }
+        <# each volume (if not a removable drive) has a .csv file in the DiskInformation folder. The $csv variable contains all the .csv files in that location #>   
+        $csv = Get-ChildItem C:\IITS_Scripts\DiskInformation -Filter *.csv
+
+        <# $c is the csv file for each volume #>
+        ForEach ($c in $csv) {
+        <# each volumes csv file is made into an object represented by $volcsv #>
+        $volcsv = Import-csv C:\IITS_Scripts\DiskInformation\$c
+
+        <# This is the total used space for each drive, calculated by adding the ChangeGBUsed column in the csv for each volume #>
+        $totalused = ($volcsv.ChangeGBUsed | Measure-Object -Sum).Sum
+
+        <# $Size is the TotalSpace of the volume taken as the Maximum value from the TotalSpace column #>
+        $Size = ($volcsv.TotalSpace | Measure-Object -Maximum).Maximum
+
+        <# Runs the Get-KaseyaMachineID FUNCTION to get the name of the machine to be used later #>
+        $machine = Get-KaseyaMachineID
+
+        <# The variable is all the points in the csv file for which the date is collected #>
+        $countall = $volcsv.count
+
+        <# 1 less than the total count to be used in the next step to get the latest freespace #>
+        $count = $volcsv.count-1
+
+        <# from the csv file, the variable gets the name of the drive in the foreach loop #>
+        $drive = $volcsv.name[$count]
+
+        <# free space on the drive, last item in the freespace column #>
+        $freespace = $volcsv.freespace[$count]
+
+            <# if the total used space is greater than 0 #>
+            if ($totalused -gt 0.00) {
+            <# gets the current time with the last time and date entry in the sheet #>
+            $currtime = $volcsv.date[$count]+" "+$volcsv.time[$count]
+            <# gets the start time from the first entry of time and date in the csv file #>
+            $starttime = $volcsv.date[0]+" "+$volcsv.time[0]
+            <# Calculates the Time Difference from $currtime and $starttime #>
+            $timediff = [math]::Round(([datetime]$currtime - [datetime]$starttime).TotalDays,2)
+            <# Daily usage is calculated by dividing the totalused by the number of days it was used in #>
+            $dailyused = $totalused / $timediff
+            <# freespace currently on a volume is divided by the dailyused average to get the projected days #>
+            $projusedays = [math]::Round(($freespace / $dailyused),2)
+                    <# if $projusedays is less than 1 month sends an e-mail , if not outputs to a log file #>
+                    if ($projusedays -le 30 ) {
+                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $projusedays days "
+                    }
+                    else {
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, space will not exhaust in 30 days instead will exhaust in $projusedays days "
+                    }
+             }
+             <# If the total used space is less than 0 ,is a negative #>
+            else {
+             Add-Content $logfile "The average space used for $drive DRIVE is $totalused GB. email will not be sent because free space will not exhaust"
+            }
+               
+        }
+    }
