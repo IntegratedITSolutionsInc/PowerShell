@@ -1676,5 +1676,4 @@ function disable-365-account
     Import-PSSession $Session
 
     Set-MsolUser -UserPrincipalName $mailbox -BlockCredential $true
-    
 }
