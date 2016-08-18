@@ -23,4 +23,5 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Remove-Application|Darren Khan|
 |Remove-Outlook-Automap|Michael Surtees|
 |Toggle-ActionCenter|Darren Khan|
-|Disable-365-Account|
+|Disable-365-Account|Michael Surtees|
+
