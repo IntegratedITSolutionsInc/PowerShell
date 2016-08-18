@@ -1367,6 +1367,69 @@ function Get-DiskChanges
                             $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
                         }
                     }
+                    elseif($volume.name -ne $Shadow.name)
+                    {
+                        $booboos += "$(Get-Date) - Found $($volume.name) is not equal to $($Shadow.name).  Calculating disk changes for $($volume.name)."
+                        if(Test-Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv") #checking for the existance of the csv file form a previous run.
+                        {
+                            $booboos += "$(Get-Date) - File Exists: C:\IITS_Scripts\DiskInformation\$($volume.name).csv."
+                            #importing csv for manipulation
+                            $import += Import-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv"
+                            $booboos += "$(Get-Date) - Importing old drive informationfor $($volume.name)."
+                            #addming new columns
+                            $import += $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date", "Time", "VSSAllocatedSpaceGB", "VSSUsedSpaceGB", "VSSMaxSpaceGB"
+                            $booboos += "$(Get-Date) - Appending new drive information for $($volume.name)."
+                            if($import.count -ge 2) #Skipping math if there is only 1 row of information.  IE the information has only been gathered once. 
+                            {
+                                $new = $import[-1]
+                                $old = $import[-2]
+                                $new.ChangeGBUsed = $old.UsedSpace - $new.UsedSpace
+                                if($old.UsedSpace -eq 0)
+                                {
+                                    $booboos += "$(Get-Date) - No Change for $($volume.name)."
+                                    $new.ChangeRatePercentUsed = 0
+                                }
+                                Else
+                                {
+                                    $new.ChangeRatePercentUsed = ((($new.UsedSpace - $old.UsedSpace)/($old.UsedSpace))*100)
+                                }
+                            }
+                            Else #Calculating the changes since there are at least 2 data points.
+                            {
+                                $booboos += "$(Get-Date) - Only one entry for $($volume.name)."
+                            }
+                            $new.date =  Get-Date -Format d
+                            $new.time =  Get-Date -Format T
+                            $new.VSSAllocatedSpaceGB = 0
+                            $new.VSSUsedSpaceGB = 0
+                            $new.VSSMaxSpaceGB = 0
+                            $booboos += "$(Get-Date) - Outputting new drive information to existing CSV for $($volume.name)."
+                            #Appending new information to existing csv file.
+                            $new | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                        }
+                        Else
+                        {
+                            $booboos += "$(Get-Date) - Creating CSV for $($volume.name)."
+                            #creating csv file since one does not exist
+                            $export = $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date" , "Time", "VSSAllocatedSpaceGB", "VSSUsedSpaceGB", "VSSMaxSpaceGB"
+                            $export.date =  Get-Date -Format d
+                            $export.time =  Get-Date -Format T
+                            $export.VSSAllocatedSpaceGB = 0
+                            $export.VSSUsedSpaceGB = 0
+                            $export.VSSMaxSpaceGB = 0
+                            $export.ChangeGBUsed = 0
+                            $export.ChangeRatePercentUsed = 0
+                            try
+                            {
+                                New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error | Out-Null
+                            }
+                            Catch
+                            {
+                                $booboos += "$(Get-Date) - Error creating DiskInformation folder. Error = $error"
+                            }
+                            $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
+                        }                        
+                    }
                     else
                     {
                         $booboos += "$(Get-Date) - Drive volume $($volume.name) does not match Shadow volume $($Shadow.name)."
