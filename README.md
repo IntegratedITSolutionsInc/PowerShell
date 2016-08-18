@@ -18,6 +18,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-MailFlowStats|Darren Khan|
 |Get-Projection|Arjun Gheek|
 |Get-ServiceAccount|Darren Khan|
+|Get-VSSStatistics|Darren Khan|
 |Hide-User-From-GAL|Michael Surtees|
 |Remove-Application|Darren Khan|
 |Remove-Outlook-Automap|Michael Surtees|
