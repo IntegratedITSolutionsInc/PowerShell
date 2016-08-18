@@ -1255,7 +1255,9 @@ function Get-DriveStatistics
 .Synopsis
    This function will export a csv file to C:\IITS_Scripts\DiskInformation that contains disk information.  There will be one file created for each volume including removable drives.
 .DESCRIPTION
-   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  This is all calculated using the used space of the drive.  There is an error log that is stored in the windows temp file directory. 
+   This function gathers the disk information and figures out the change in disk usage as a daily change in GB and that day's change percentage.  
+   This is all calculated using the used space of the drive.  There is an error log that is stored in the windows temp file directory.
+   This function will also gather VSS information if it is run as an administrator.  This can be useful for figuring out if a VSS aware backup is working correctly
 .EXAMPLE
    Get-DiskChanges -ErrorLog
 #>
@@ -1270,72 +1272,111 @@ function Get-DiskChanges
 
     Begin
     {
+        #Set variable so that process block will run
+        $stop = 0
+        #Getting relevent drive information as well as VSS information
         Try
         {
             $booboos = @()
             $import = @()
-            $volumes = Get-DriveStatistics
+            $volumes = Get-DriveStatistics -ErrorLog -ErrorAction Stop
+            $Shadows = Get-VSSStatistics -ErrorLog -ErrorAction stop
+            if($Shadows -match "ERROR. Need to run as administrator! Error = Initialization failure")
+            {
+                #This will execute if we can't get the VSS information.  This makes it so that the disk information is still calculated but there will not be any VSS information. 
+                $booboos += "$(Get-Date) - Couldn't run Get-VSSStatistics."
+                $Shadows = $volumes
+            }
         }
         Catch
         {
             $booboos += "$(Get-Date) - Couldn't get drive lists."
+            #Stops process block from running
+            $stop = 1
         }
     }
     Process
     {
-        if(!$booboos)
+        if($stop -eq 0)
         {
-            Foreach($volume in $volumes)
+            foreach($Shadow in $Shadows) #running through each volume found in shadowstorage class
             {
-                if(Test-Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv")
+                $booboos += "$(Get-Date) - Processing $shadow."
+                Foreach($volume in $volumes) #running through each volume found from disk information
                 {
-                    $import += Import-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv"
-                    $booboos += "$(Get-Date) - Importing old drive informationfor $($volume.name)."
-                    $import += $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date", "Time"
-                    $booboos += "$(Get-Date) - Appending new drive information for $($volume.name)."
-                    if($import.count -ge 2)
+                    $booboos += "$(Get-Date) - Processing $volume."
+                    if($volume.name -eq $Shadow.name) #checking which volumes match to get both vss and disk information into one object
                     {
-                        $new = $import[-1]
-                        $old = $import[-2]
-                        $new.ChangeGBUsed = $old.UsedSpace - $new.UsedSpace
-                        if($old.UsedSpace -eq 0)
+                        if(Test-Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv") #checking for the existance of the csv file form a previous run.
                         {
-                            $booboos += "$(Get-Date) - No Change for $($volume.name)."
-                            $new.ChangeRatePercentUsed = 0
+                            $booboos += "$(Get-Date) - File Exists: C:\IITS_Scripts\DiskInformation\$($volume.name).csv."
+                            #importing csv for manipulation
+                            $import += Import-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv"
+                            $booboos += "$(Get-Date) - Importing old drive informationfor $($volume.name)."
+                            #addming new columns
+                            $import += $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date", "Time", "VSSAllocatedSpaceGB", "VSSUsedSpaceGB", "VSSMaxSpaceGB"
+                            $booboos += "$(Get-Date) - Appending new drive information for $($volume.name)."
+                            if($import.count -ge 2) #Skipping math if there is only 1 row of information.  IE the information has only been gathered once. 
+                            {
+                                $new = $import[-1]
+                                $old = $import[-2]
+                                $new.ChangeGBUsed = $old.UsedSpace - $new.UsedSpace
+                                if($old.UsedSpace -eq 0)
+                                {
+                                    $booboos += "$(Get-Date) - No Change for $($volume.name)."
+                                    $new.ChangeRatePercentUsed = 0
+                                }
+                                Else
+                                {
+                                    $new.ChangeRatePercentUsed = ((($new.UsedSpace - $old.UsedSpace)/($old.UsedSpace))*100)
+                                }
+                            }
+                            Else #Calculating the changes since there are at least 2 data points.
+                            {
+                                $booboos += "$(Get-Date) - Only one entry for $($volume.name)."
+                            }
+                            $new.date =  Get-Date -Format d
+                            $new.time =  Get-Date -Format T
+                            $new.VSSAllocatedSpaceGB = $Shadow.VSSAllocatedSpaceGB
+                            $new.VSSUsedSpaceGB = $Shadow.VSSUsedSpaceGB
+                            $new.VSSMaxSpaceGB = $Shadow.VSSMaxSpaceGB
+                            $booboos += "$(Get-Date) - Outputting new drive information to existing CSV for $($volume.name)."
+                            #Appending new information to existing csv file.
+                            $new | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
                         }
                         Else
                         {
-                            $new.ChangeRatePercentUsed = ((($new.UsedSpace - $old.UsedSpace)/($old.UsedSpace))*100)
+                            $booboos += "$(Get-Date) - Creating CSV for $($volume.name)."
+                            #creating csv file since one does not exist
+                            $export = $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date" , "Time", "VSSAllocatedSpaceGB", "VSSUsedSpaceGB", "VSSMaxSpaceGB"
+                            $export.date =  Get-Date -Format d
+                            $export.time =  Get-Date -Format T
+                            $export.VSSAllocatedSpaceGB = $Shadow.VSSAllocatedSpaceGB
+                            $export.VSSUsedSpaceGB = $Shadow.VSSUsedSpaceGB
+                            $export.VSSMaxSpaceGB = $Shadow.VSSMaxSpaceGB
+                            $export.ChangeGBUsed = 0
+                            $export.ChangeRatePercentUsed = 0
+                            try
+                            {
+                                New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error | Out-Null
+                            }
+                            Catch
+                            {
+                                $booboos += "$(Get-Date) - Error creating DiskInformation folder. Error = $error"
+                            }
+                            $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
                         }
                     }
-                    Else
+                    else
                     {
-                        $booboos += "$(Get-Date) - Only one entry for $($volume.name)."
+                        $booboos += "$(Get-Date) - Drive volume $($volume.name) does not match Shadow volume $($Shadow.name)."
                     }
-                    $new.date =  Get-Date -Format d
-                    $new.time =  Get-Date -Format T
-                    $booboos += "$(Get-Date) - Outputting new drive information to existing CSV for $($volume.name)."
-                    $new | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
-                }
-                Else
-                {
-                    $booboos += "$(Get-Date) - Creating CSV for $($volume.name)."
-                    $export = $volume | Select-Object *, "ChangeGBUsed", "ChangeRatePercentUsed", "Date" , "Time"
-                    $export.date =  Get-Date -Format d
-                    $export.time =  Get-Date -Format T
-                    $export.ChangeGBUsed = 0
-                    $export.ChangeRatePercentUsed = 0
-                    try
-                    {
-                        New-Item -Path "C:\IITS_Scripts\DiskInformation" -ItemType Directory -ErrorAction Stop -ErrorVariable error | Out-Null
-                    }
-                    Catch
-                    {
-                        $booboos += "$(Get-Date) - Error creating DiskInformation folder. Error = $error"
-                    }
-                    $export | Export-Csv -Path "C:\IITS_Scripts\DiskInformation\$($volume.name).csv" -Force -Append
                 }
             }
+        }
+        Else
+        {
+            $booboos += "$(Get-Date) - Errors were detected before process block."
         }
     }
     End
@@ -1350,3 +1391,199 @@ function Get-DiskChanges
         }
     }
 }
+
+<#
+.Synopsis
+   Checks for outdated PowerShell version and returns True if it is. Option to e-mail MSAlarm on True.
+.DESCRIPTION
+   Checks the installed PowerShell version (Major) and sees if it's less than 3. If so, it returns True. If the ticket switch is enabled, it also e-mails MSAlarm with a request to update it.
+.EXAMPLE
+   Check-PSVersion
+.EXAMPLE
+   Check-PSVersion -ticket
+.INPUTS
+   No inputs, optional 'ticket' switch.
+.OUTPUTS
+   Boolean. If 'ticket' switch called, also sends an e-mail.
+#>
+
+function Check-PSVersion
+{
+    Param
+    (
+        # Switch parameter; call to send e-mail to MSAlarm, which will make a ticket.
+        [Switch]$ticket
+    )
+    
+    if ($PSVersionTable.PSVersion.Major -lt 3)
+    {
+        return $true
+        if ($ticket)
+        {
+            $id = Get-KaseyaMachineID
+            Email-MSalarm -Body "$id needs a PowerShell upgrade."
+        }
+    }
+    else {return $false}
+}
+
+<#
+.Synopsis
+   This function will output the size of the VSS store on a machine for all volumes that have shadow volume usage. THIS NEEDS TO BE RUN AS WITH ADMINISTATIVE ACCESS!
+.DESCRIPTION
+   This function gathers all volumes according to the wwin32_volume class as well as the volumes as reported by win32_shadowstorage class.  It will compare the 2 and weed out any volumes that do not have used vss space.  It will then output the results in a custom object.
+.EXAMPLE
+   Get-VSSStatistics -ErrorLog
+#>
+function Get-VSSStatistics
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos = @()
+        $errors = $null
+        try
+        {
+            #gather all volumes on the computer
+            $Volumes = Get-WmiObject -Class Win32_Volume -ErrorAction Stop -ErrorVariable errors
+            #gather all shadowstorage objects.
+            $ShadowStorageObjects = Get-WmiObject -Class Win32_ShadowStorage -ErrorAction Stop -ErrorVariable errors
+        }
+        Catch [System.Management.ManagementException]
+        {
+            $booboos += "$(Get-Date) - Need to run script as administrator. ERROR = $errors."
+            return "ERROR. Need to run as administrator! Error = $($error[0])"
+        }
+        Catch
+        {
+            $booboos += "$(Get-Date) - Something went wrong with getting WMIObjects."
+        }
+        [array]$report = @()
+    }
+    Process
+    {
+        foreach($ShadowStorageObject in $ShadowStorageObjects)
+        {
+            foreach($Volume in $Volumes)
+            {
+                If($ShadowStorageObject.volume -eq $Volume.__RELPATH)
+                {
+                    $Prop=
+                    [ordered]@{
+                    'Name' = $Volume.driveletter.trimend(":")
+                    'VSSDrive'=$volume.name
+                    'VSSAllocatedSpaceGB' = [System.Math]::Round(($ShadowStorageObject.AllocatedSpace /1GB), 3)
+                    'VSSUsedSpaceGB'=[System.Math]::Round(($ShadowStorageObject.usedspace /1GB), 3)
+                    'VSSMaxSpaceGB'= [System.Math]::Round(($ShadowStorageObject.maxspace /1GB), 3)
+                    }
+                    $report += New-Object -TypeName psobject -Property $Prop  
+                }
+                else
+                {
+                    $booboos += "$(Get-Date) - $($ShadowStorageObject.volume) didn't match $($Volume.__RELPATH)"
+                }
+            }
+        }
+        return $report
+     }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\VSSStatistics_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   This function calculates the projected number of days in which the free space on Non-Removable drive will be used completely. If the space will be used in less than 30 days it will send an e-mail.
+   .DESCRIPTION
+   This function collects the .csv files for each of the drives located in the C:\IITS_Scripts\DiskInformation folder. Based on the total used space, free size and the number of days 
+   the data is collected for it calculates the rate of change for a single day. It then projects the number of days in which the free space will be used completely.
+   The script does not have any parameter, however it does use 2 other functions : Get-KaseyaMachineID and Email-MSAlarm.
+   .EXAMPLE
+Get-Projection
+   #>
+
+function Get-Projection {
+    <# LOG FILE is created to output the information to.Log file exists at  C:\IITS_Mgmt\Temp\DiskInformation\logs.txt
+    checks if the log file exist in the first if block, if it exists it adds a general comment , if it does not exist then runs the code in the else statement where 
+    it makes the DiskInformation folder and the logs.txt file  #>
+    $logfile = 'C:\IITS_Mgmt\Temp\DiskInformation\logs.txt'
+    $date = Get-Date
+    $testlogfile = Test-Path $logfile
+        if ($testlogfile -eq $true) {
+        Add-Content $logfile "logs on $date"
+        }
+        else {
+        New-Item -Path 'C:\IITS_Mgmt\Temp' -ItemType 'Directory' -Name 'DiskInformation'
+        New-Item -Path 'C:\IITS_Mgmt\Temp\DiskInformation' -ItemType 'file' -Name 'logs.txt'
+        Add-Content $logfile "This is where we collect logs for Disk Usage"
+        }
+        <# each volume (if not a removable drive) has a .csv file in the DiskInformation folder. The $csv variable contains all the .csv files in that location #>   
+        $csv = Get-ChildItem C:\IITS_Scripts\DiskInformation -Filter *.csv
+
+        <# $c is the csv file for each volume #>
+        ForEach ($c in $csv) {
+        <# each volumes csv file is made into an object represented by $volcsv #>
+        $volcsv = Import-csv C:\IITS_Scripts\DiskInformation\$c
+
+        <# This is the total used space for each drive, calculated by adding the ChangeGBUsed column in the csv for each volume #>
+        $totalused = ($volcsv.ChangeGBUsed | Measure-Object -Sum).Sum
+
+        <# $Size is the TotalSpace of the volume taken as the Maximum value from the TotalSpace column #>
+        $Size = ($volcsv.TotalSpace | Measure-Object -Maximum).Maximum
+
+        <# Runs the Get-KaseyaMachineID FUNCTION to get the name of the machine to be used later #>
+        $machine = Get-KaseyaMachineID
+
+        <# The variable is all the points in the csv file for which the date is collected #>
+        $countall = $volcsv.count
+
+        <# 1 less than the total count to be used in the next step to get the latest freespace #>
+        $count = $volcsv.count-1
+
+        <# from the csv file, the variable gets the name of the drive in the foreach loop #>
+        $drive = $volcsv.name[$count]
+
+        <# free space on the drive, last item in the freespace column #>
+        $freespace = $volcsv.freespace[$count]
+
+            <# if the total used space is greater than 0 #>
+            if ($totalused -gt 0.00) {
+            <# gets the current time with the last time and date entry in the sheet #>
+            $currtime = $volcsv.date[$count]+" "+$volcsv.time[$count]
+            <# gets the start time from the first entry of time and date in the csv file #>
+            $starttime = $volcsv.date[0]+" "+$volcsv.time[0]
+            <# Calculates the Time Difference from $currtime and $starttime #>
+            $timediff = [math]::Round(([datetime]$currtime - [datetime]$starttime).TotalDays,2)
+            <# Daily usage is calculated by dividing the totalused by the number of days it was used in #>
+            $dailyused = $totalused / $timediff
+            <# freespace currently on a volume is divided by the dailyused average to get the projected days #>
+            $projusedays = [math]::Round(($freespace / $dailyused),2)
+                    <# if $projusedays is less than 1 month sends an e-mail , if not outputs to a log file #>
+                    if ($projusedays -le 30 ) {
+                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $projusedays days "
+                    }
+                    else {
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, space will not exhaust in 30 days instead will exhaust in $projusedays days "
+                    }
+             }
+             <# If the total used space is less than 0 ,is a negative #>
+            else {
+             Add-Content $logfile "The average space used for $drive DRIVE is $totalused GB. email will not be sent because free space will not exhaust"
+            }
+               
+        }
+    }
