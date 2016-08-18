@@ -1677,3 +1677,108 @@ function disable-365-account
 
     Set-MsolUser -UserPrincipalName $mailbox -BlockCredential $true
 }
+
+
+<#
+.Synopsis
+   Creates and iVantage user on Chartis' 365
+.DESCRIPTION
+   Will request appropriate information when run
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Add-iVantage-User
+{
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([int])]
+    Param
+    (
+
+    )
+
+    Begin
+    {
+
+    # Connect to 365
+    $LiveCred = Get-Credential
+    Import-Module msonline
+    Connect-MsolService -Credential $livecred
+    $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://ps.outlook.com/powershell/?proxymethod=rps -Credential $LiveCred -Authentication Basic -AllowRedirection
+    Import-PSSession $Session
+
+    }
+    Process
+    {
+
+# Prompt for information of the iVantage user
+$first=Read-Host "What is the iVantage user FIRST name?  " ; cls
+$last=read-host "What is the iVantage user LAST name?  " ; cls
+$pass=read-host "What is the user PASSWORD?  " ; cls
+$space = " "
+$comma = ", "
+$title=read-host "What is the user Title?  " ; cls
+$mobile = read-host "What is the user Cell Number? "  ; cls
+$work = read-host "What is the user Work Number?  " ; cls
+
+$ivantage_email = read-host "What is the user NON-Chartis iVantage email?  Example:  jsmith@ivantage.com   " ; cls
+
+# Need "first" and "last" variables twice: once for username and once for Principal name name.  Duplicate them here
+$pc_first=$first
+$pc_last=$last
+
+
+# Create Principal Name from the above
+# If last name isn't long enough there WILL be an error...it can be ignored
+$pc_last=$last
+$pc_first=$pc_first.substring(0,1)
+$principal="$pc_first$pc_last@chartis.com"
+
+#  Add the user to 365
+New-MsolUser -DisplayName "$last$comma$first" -FirstName $first -LastName $last -UserPrincipalName $principal -Password $pass
+set-user $principal -mobilephone $mobile -phone $work
+set-user -identity $principal -title $title
+
+
+# Set license
+Set-MsolUser -UserPrincipalName $principal -UsageLocation US
+Set-MsolUserLicense -UserPrincipalName $principal -addlicenses chartis:EXCHANGESTANDARD
+
+#Hide from GAL
+set-mailbox -identity $principal -HiddenFromAddressListsEnabled $true
+
+#Forward emails to their iVantage email account
+Set-Mailbox -Identity $principal -DeliverToMailboxAndForward $false -ForwardingSMTPAddress $ivantage_email
+
+# Create iVantage alias in the GAL
+New-MailContact -Name "$last$comma$first" -ExternalEmailAddress $ivantage_email
+Set-Contact "$last$comma$first" -Company "iVantageHealth"
+Set-Contact "$last$comma$first" -title $title
+set-mailcontact -identity $last$comma$first -alias "$pc_first$last"
+
+
+# Add iVantage "tag" to comments field
+Set-Mailbox –CustomAttribute1 “ivantage” –Identity $principal
+
+
+# Add to iVantage Distro
+Add-DistributionGroupMember -Identity “iVantage@chartis.com” -Member $principal
+
+    }
+    End
+    {
+    Write-Host "The iVantage user has been added with the following information:"
+    write-host " "
+    Write-Host "Title:  " $title
+    Write-Host "First name:  " $first
+    Write-Host "Last name:  " $last
+    Write-Host "Mobile number:  " $mobile
+    Write-Host "Work number:  " $work
+    write-host " "
+    Write-Host "Display name:  " $last$comma$first
+
+
+    }
+}
