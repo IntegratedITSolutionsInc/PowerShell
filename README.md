@@ -4,6 +4,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |---|---|
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|
+|Disable-365-Account|
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
 |Find-If-Domain-Blacklisted|Michael Surtees|
@@ -22,3 +23,4 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Remove-Application|Darren Khan|
 |Remove-Outlook-Automap|Michael Surtees|
 |Toggle-ActionCenter|Darren Khan|
+|Disable-365-Account|
