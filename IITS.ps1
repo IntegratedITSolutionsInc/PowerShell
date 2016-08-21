@@ -1635,3 +1635,81 @@ function disable-365-account
 
     Set-MsolUser -UserPrincipalName $mailbox -BlockCredential $true
 }
+
+<#
+.Synopsis
+   This cmdlet will schedule get-diskchanges to run as a shceduled task for every hour. 
+.DESCRIPTION
+   This function will scheduled get-diskchanges to run every 10 minutes so that statistics can be gathered.  
+.EXAMPLE
+   Deploy-GetDiskChanges
+#>
+function Deploy-GetDiskChanges
+{
+    [CmdletBinding()]
+    Param
+    (
+        # Switch for error logging. 
+        [Switch]
+        $ErrorLog
+    )
+
+    Begin
+    {
+        $booboos = @()
+        $PSVersion = Check-PSVersion -ticket #Check the powershell version. Needs to be at least version 3.  Sends email to msalarm if version is less than 3. 
+        if($PSVersion -eq $false)
+        {
+            $stop = 0
+            $booboos += "$(Get-Date) - Powershell version is 3 or greater."
+        }
+        else
+        {
+            $stop = 1
+            $booboos += "$(Get-Date) - Powershell version is less than 3."
+        }
+    }
+    Process
+    {
+        if($stop -eq "0")
+        {
+            $booboos += "$(Get-Date) - Executing process block if statement because powershell version is 3 or higher."
+            $CurrentScheduledTask = Get-ScheduledTask | Where-Object {($_.TaskName -eq 'GetDiskChanges')} #Getting list of tasks and seeing if there is already a task by the name of GetDiskChanges
+            if($CurrentScheduledTask)
+            {
+                $booboos += "$(Get-Date) - Scheduled task $CurrentScheduledTask already exists.  Skip creation process."
+            }
+            else
+            {
+                $booboos += "$(Get-Date) - No GetDiskChanges task found. Creating a new task."
+                $TaskName = 'GetDiskChanges'
+                $action = New-ScheduledTaskAction -Execute 'powershell.exe'-Argument '-NoProfile -WindowStyle Hidden -verb runas -command "Get-DiskChanges"'
+                $trigger = New-ScheduledTaskTrigger -Once -At 9am -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 9000)
+                $settings = New-ScheduledTaskSettingsSet -Priority 10
+                try
+                {
+                    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User -Password -Description "This gathers disk information every 10 minutes." -Settings $settings -ErrorAction Stop
+                }
+                Catch
+                {
+                    $booboos += "$(Get-Date) - Couldn't create new scheduled task.  Error is $error[0]."
+                }                
+            }
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Skipping process block because powershell version is less than 3 and scheduled tasks can't be created."
+        }   
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DeployDiskChanges_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
