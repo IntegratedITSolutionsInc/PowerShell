@@ -566,7 +566,7 @@ function Get-EsetLink
                   PositionalBinding=$false,
                   HelpUri = 'http://www.microsoft.com/',
                   ConfirmImpact='Medium')]
-    [Alias("Get-ESET")]
+    [Alias("Get-EsetAgent")]
     [OutputType([String])]
     Param
     (
@@ -585,23 +585,23 @@ function Get-EsetLink
     
     Begin
     {
-    # Get the OS architecture of the target (Windows) machine.
-    (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
-    [Int]$machOS=$matches[0]
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+        [Int]$machOS=$matches[0]
     
-    # RegEx the machine name to extract the group name.
-    $machName -match '[\w-]+$' | Out-Null
-    [String]$groupName = $matches[0]
+        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
+        $machName -match '[\w-]+$' | Out-Null
+        [String]$groupName = $matches[0]
     }
     Process
     {
-    # Import the key and search for the group and OS architecture. Save the result to a container.
-    $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
+        # Import the key and search for the group and OS architecture. Save the result to a container.
+        $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
     }
     End
     {
-    # Print the container with the ESET link.
-    return $orgLink
+        # Print the container with the ESET link.
+        return $orgLink
     }
 }
 
