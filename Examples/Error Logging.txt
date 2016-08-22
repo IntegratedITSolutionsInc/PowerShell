@@ -1,0 +1,25 @@
+[Param()]
+[Switch]$Logging
+
+Begin
+{
+	$logs=@()
+}
+
+Process
+{
+	$logs += "$(Get-Date) - [log text here]."
+}
+
+End
+{
+	if($Logging)
+	{
+		
+$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
+		foreach($log in $logs)
+		{
+			"$log" | Out-File -FilePath $LogPath -Force -Append
+		}
+	}
+}
