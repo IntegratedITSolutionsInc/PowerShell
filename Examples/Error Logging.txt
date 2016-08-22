@@ -8,18 +8,15 @@ Begin
 
 Process
 {
-	$logs += "$(Get-Date) - [log text here]."
+	$logs += "$(Get-Date) - "
 }
 
 End
 {
 	if($Logging)
 	{
-		
-$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
+		$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
 		foreach($log in $logs)
-		{
-			"$log" | Out-File -FilePath $LogPath -Force -Append
-		}
+		{"$log" | Out-File -FilePath $LogPath -Force -Append}
 	}
 }

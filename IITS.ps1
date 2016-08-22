@@ -551,6 +551,8 @@ function hide-user-from-GAL
    Determine the root org (groupName) based on a given machine ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
 .EXAMPLE
    Get-EsetLink [-machName] my.machine.sccit
+
+   http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
 .INPUTS
    machName (string)
 .OUTPUTS
@@ -575,33 +577,102 @@ function Get-EsetLink
                    ValueFromPipeline=$true,
                    ValueFromPipelineByPropertyName=$true, 
                    ValueFromRemainingArguments=$false,
-                   Position=0,
-                   ParameterSetName='Parameter Set 1')]
+                   Position=0)]
         [ValidateNotNull()]
         [ValidateNotNullOrEmpty()]
         [Alias("name","machine")] 
-        [String]$machName
+        [String]$machName,
+
+        # Optional log switch. Outputs to $env:windir\Temp\GetEsetLink_IITS.txt
+        [Parameter(Mandatory=$false,
+                   ValueFromPipeline=$false)]
+        [Alias("log","errorlog","error")]
+        [Switch]$Logging
     )
     
     Begin
     {
-        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
-        (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
-        [Int]$machOS=$matches[0]
-    
-        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
-        $machName -match '[\w-]+$' | Out-Null
-        [String]$groupName = $matches[0]
+        # Initialize the killswitch.
+        $kill = 0
+
+        # Initialize the logs array.
+        $logs = @()
+        
+        # Verify the local PowerShell version is sufficient to actually run the main function.
+        $logs += "$(Get-Date) - Checking installed PowerShell version for compatibility."
+        if (Check-PSVersion)
+        {
+            $logs += "$(Get-Date) - PowerShell version insufficient to run Get-EsetLink. Current version: $($PSVersionTable.PSVersion.Major)"
+            $kill++
+        }
+
+        # Verify EsetKey actually exists where it is supposed to be.
+        $logs += "$(Get-Date) - Checking for existence of EsetKey.csv."
+        if(Test-Path C:\IITS_Scripts\EsetKey.csv){}
+        else
+        {
+            $logs += "$(Get-Date) - EsetKey.csv does not exist! Download fresh copy of EsetKey.csv required."
+            $kill++
+            Write-Host "EsetKey.csv does not exist! Please download a fresh copy of EsetKey.csv." -BackgroundColor Black -ForegroundColor Red
+        }       
     }
+
     Process
     {
-        # Import the key and search for the group and OS architecture. Save the result to a container.
-        $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
+        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
+        $logs += "$(Get-Date) - Pulling group name from given machine name '$machName'."
+        Try
+        {
+            $machName -match '[\w-]+$' | Out-Null
+            [String]$groupName = $matches[0]
+        }
+        Catch
+        {
+            $logs += "$(Get-Date) - Could not run RegEx on given machine name '$machName'. Error: $($Error[0])"
+            $kill++
+        }
+
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        Try
+        {
+            $logs += "$(Get-Date) - Fetching OS architecture."
+            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+            [Int]$machOS=$matches[0]
+        }
+        Catch
+        {
+            $logs += "$(Get-Date) - Could not determine OS architecture."
+            $kill++
+        }
+        
+        # If there have been any issues (which would cause $kill /= 0), don't process the rest of the Process block.
+        if($kill -eq 0)
+        {
+            # Import the key and search for the group and OS architecture. Save the result to a container.
+            Try
+            {
+                $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
+            }
+            Catch
+            {
+                $logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"
+            }
+        }
+        else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
     }
+
     End
     {
-        # Print the container with the ESET link.
-        return $orgLink
+        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+        if($Logging)
+        {
+            $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
+            foreach($log in $logs)
+            {"$log" | Out-File -FilePath $LogPath -Force -Append}
+        }
+        
+        # Output the container with the ESET link.
+        echo $orgLink
     }
 }
 
