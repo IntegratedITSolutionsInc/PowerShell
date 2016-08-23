@@ -1688,7 +1688,7 @@ function Deploy-GetDiskChanges
                 $settings = New-ScheduledTaskSettingsSet -Priority 10
                 try
                 {
-                    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User -Password -Description "This gathers disk information every 10 minutes." -Settings $settings -ErrorAction Stop
+                    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User <#Username goes here!!!!#> -Password <#Password goes here#> -Description "This gathers disk information every 10 minutes." -Settings $settings -ErrorAction Stop
                 }
                 Catch
                 {
@@ -1700,6 +1700,78 @@ function Deploy-GetDiskChanges
         {
             $booboos += "$(Get-Date) - Skipping process block because powershell version is less than 3 and scheduled tasks can't be created."
         }   
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\DeployDiskChanges_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
+<#
+.Synopsis
+   THis script will send out the three patching notifications prior to server patching if the day is correct. 
+.DESCRIPTION
+   This script finds the first day of the month and then extrapolates the 4th tuesday from that day.  It will then compare the current day to figure out if it's the Friday preceding, Monday preceding, or the day of patching.  It will do something specific for each of those days. 
+.EXAMPLE
+   Send-PatchEmail -ErrorLog
+
+#>
+function Send-PatchEmail
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        
+        $booboos = @()
+        $currentdate = Get-Date
+        $booboos += "$(Get-Date) - Today's date found as $currentdate."
+        $firstofthemonth = Get-Date -Day 1
+        $booboos += "$(Get-Date) - Found the first of the month as $firstofthemonth."
+        switch ($firstofthemonth.DayOfWeek)
+        {
+            "Sunday"    {$patchTuesday = $firstofthemonth.AddDays(23); break} 
+            "Monday"    {$patchTuesday = $firstofthemonth.AddDays(22); break} 
+            "Tuesday"   {$patchTuesday = $firstofthemonth.AddDays(21); break} 
+            "Wednesday" {$patchTuesday = $firstofthemonth.AddDays(27); break} 
+            "Thursday"  {$patchTuesday = $firstofthemonth.AddDays(26); break} 
+            "Friday"    {$patchTuesday = $firstofthemonth.AddDays(25); break} 
+            "Saturday"  {$patchTuesday = $firstofthemonth.AddDays(24); break} 
+        }
+        $booboos += "$(Get-Date) - Found patch tuesday to be $patchTuesday."
+    }
+    Process
+    {
+        if($patchTuesday.AddDays(-4).day -eq $currentdate.day)
+        {
+            $booboos += "$(Get-Date) - Found today is the Friday before patching."
+            #Do something for the friday before patching
+        }
+        elseif($patchTuesday.AddDays(-1).day -eq $currentdate.Day)
+        {
+            $booboos += "$(Get-Date) - Found today is the Monday before patching."
+            #Do something for the monday before patching
+        }
+        Elseif($patchTuesday.day -eq $currentdate.Day)
+        {
+            $booboos += "$(Get-Date) - Found today is the day of patching."
+            #Do something for the tuesday of patching
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Found today is not either of the right patching days."
+        }
     }
     End
     {
