@@ -572,17 +572,6 @@ function Get-EsetLink
     [OutputType([String])]
     Param
     (
-        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
-        [Parameter(Mandatory=$true, 
-                   ValueFromPipeline=$true,
-                   ValueFromPipelineByPropertyName=$true, 
-                   ValueFromRemainingArguments=$false,
-                   Position=0)]
-        [ValidateNotNull()]
-        [ValidateNotNullOrEmpty()]
-        [Alias("name","machine")] 
-        [String]$machName,
-
         # Optional log switch. Outputs to $env:windir\Temp\GetEsetLink_IITS.txt
         [Parameter(Mandatory=$false,
                    ValueFromPipeline=$false)]
@@ -608,8 +597,7 @@ function Get-EsetLink
 
         # Verify EsetKey actually exists where it is supposed to be.
         $logs += "$(Get-Date) - Checking for existence of EsetKey.csv."
-        if(Test-Path C:\IITS_Scripts\EsetKey.csv){}
-        else
+        if(!(Test-Path C:\IITS_Scripts\EsetKey.csv))
         {
             $logs += "$(Get-Date) - EsetKey.csv does not exist! Download fresh copy of EsetKey.csv required."
             $kill++
@@ -619,8 +607,12 @@ function Get-EsetLink
 
     Process
     {
+        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
+        $logs += "$(Get-Date) - Pulling full Kaseya ID."
+        $machName = Get-KaseyaMachineID
+        
         # RegEx the machine name to extract the group name. DO NOT output the actual match result.
-        $logs += "$(Get-Date) - Pulling group name from given machine name '$machName'."
+        $logs += "$(Get-Date) - Pulling group name from machine name '$machName'."
         Try
         {
             $machName -match '[\w-]+$' | Out-Null
