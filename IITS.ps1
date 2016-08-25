@@ -553,6 +553,8 @@ function hide-user-from-GAL
    Get-EsetLink [-machName] my.machine.sccit
 
    http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
+.INPUTS
+   Logging (switch)
 .OUTPUTS
    URL (string)
 .FUNCTIONALITY
