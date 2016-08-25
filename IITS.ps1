@@ -182,7 +182,7 @@ function Toggle-ActionCenter
         }
         Catch
         {
-            Email-MSalarm -From "Powershell@integratedit.com" -Body $CurrentError -Attachment $output
+            "$(Get-Date) - Ran into problem getting the machineID" | Out-File -FilePath $output -Force -Append
         }
     }
     End
@@ -196,9 +196,7 @@ function Toggle-ActionCenter
 .DESCRIPTION
    There are 3 parts to this procedure.  The first part connects to Office 365 after requesting the credentials.  The credentials that are used will dictate what tenant information is gathered.  
 .EXAMPLE
-   Example of how to use this cmdlet
-.EXAMPLE
-   Another example of how to use this cmdlet
+   Get-MailFlowStatistics -Errorlog
 #>
 function Get-MailFlowStats
 {
@@ -315,8 +313,7 @@ function Get-MailFlowStats
    This cmdlet will connect to the local machine's Microsoft Word installation and then remove a word so that it does not autocorrect to another word.  ehr will no longer autocorrect to her.
 .EXAMPLE
    Remove-AutoCorrect -WordToRemove "ehr"
-.EXAMPLE
-   Another example of how to use this cmdlet
+
 #>
 function Remove-AutoCorrect
 {
@@ -394,8 +391,6 @@ function Remove-AutoCorrect
    Will prompt for email address of user and disable after you give the 365 credentials
 .EXAMPLE
    Example of how to use this cmdlet
-.EXAMPLE
-   Another example of how to use this cmdlet
 #>
 function disable-365-account
 {
@@ -447,9 +442,6 @@ $parts[0]
 .EXAMPLE
    After execution, you'll be asked for the path of the Kaseya installer for
    the client
-
-.EXAMPLE
-   
 #>
 function external-kaseya-push
 {
@@ -1721,7 +1713,6 @@ function Deploy-GetDiskChanges
    This script finds the first day of the month and then extrapolates the 4th tuesday from that day.  It will then compare the current day to figure out if it's the Friday preceding, Monday preceding, or the day of patching.  It will do something specific for each of those days. 
 .EXAMPLE
    Send-PatchEmail -ErrorLog
-
 #>
 function Send-PatchEmail
 {
@@ -1756,21 +1747,48 @@ function Send-PatchEmail
         if($patchTuesday.AddDays(-4).day -eq $currentdate.day)
         {
             $booboos += "$(Get-Date) - Found today is the Friday before patching."
-            #Do something for the friday before patching
+            $Phrase = "Next week Tuesday"
+            $email = $true
         }
         elseif($patchTuesday.AddDays(-1).day -eq $currentdate.Day)
         {
             $booboos += "$(Get-Date) - Found today is the Monday before patching."
-            #Do something for the monday before patching
+            $Phrase = "Tomorrow"
+            $email = $true
         }
         Elseif($patchTuesday.day -eq $currentdate.Day)
         {
             $booboos += "$(Get-Date) - Found today is the day of patching."
-            #Do something for the tuesday of patching
+            $Phrase = "Today"
+            $email = $true
         }
         else
         {
             $booboos += "$(Get-Date) - Found today is not either of the right patching days."
+            $email = $false
+        }
+        if($email -eq $true)
+        {
+            $Subject = "Reminder: Integrated IT Solutions is patching servers on $($patchtuesday | get-date -format D)."
+            $Body = "Hi,
+
+            $Phrase $($patchtuesday | get-date -format D), is the fourth Tuesday of the month, so in accordance with our patching schedule, we will be patching your servers. Reboots will happen after hours starting at 9pm. Please respond back to this email if there are conflicts with patching your server(s) $Phrase, $($patchtuesday | get-date -format D)!
+            Any Machines which have been previously discussed as being excluded from patching will continue to be excluded until you tell us otherwise. As a reminder, workstatations are patched according to your agreed upon schedule as detailed in your Managed Services agreement.
+            Please contact your account manager if you would like to review or change any of your patching schedules.  Thank you for your continued support of our Managed Services Program!
+
+            Managed Services Team
+            Integrated IT Solutions
+            781-742-2200 Option 2
+            ITHelp@intgratedit.com"
+
+            $securepwd = Get-Content -Path 'C:\PatchEmail\Passwd.txt' | ConvertTo-SecureString
+            $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "Managed.Services",$securepwd
+
+            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - Not Sending email since it's not the right day."
         }
     }
     End
