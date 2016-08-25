@@ -546,13 +546,12 @@ function hide-user-from-GAL
 
    http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
 .INPUTS
-   machName (string)
+   Logging (switch)
 .OUTPUTS
    URL (string)
 .FUNCTIONALITY
    Downloads a URL link to an installer.
 #>
-
 function Get-EsetLink
 {
     [CmdletBinding(DefaultParameterSetName='Parameter Set 1', 
@@ -1475,14 +1474,18 @@ function Get-DiskChanges
    Checks the installed PowerShell version (Major) and sees if it's less than 3. If so, it returns True. If the ticket switch is enabled, it also e-mails MSAlarm with a request to update it.
 .EXAMPLE
    Check-PSVersion
+
+   True
 .EXAMPLE
    Check-PSVersion -ticket
+
+   True
+   [ticket created in ConnectWise]
 .INPUTS
    No inputs, optional 'ticket' switch.
 .OUTPUTS
    Boolean. If 'ticket' switch called, also sends an e-mail.
 #>
-
 function Check-PSVersion
 {
     Param
@@ -1493,14 +1496,14 @@ function Check-PSVersion
     
     if ($PSVersionTable.PSVersion.Major -lt 3)
     {
-        return $true
+        echo $true
         if ($ticket)
         {
             $id = Get-KaseyaMachineID
             Email-MSalarm -Body "$id needs a PowerShell upgrade."
         }
     }
-    else {return $false}
+    else {echo $false}
 }
 
 <#
@@ -1590,7 +1593,6 @@ function Get-VSSStatistics
    .EXAMPLE
 Get-Projection
    #>
-
 function Get-Projection {
     <# LOG FILE is created to output the information to.Log file exists at  C:\IITS_Mgmt\Temp\DiskInformation\logs.txt
     checks if the log file exist in the first if block, if it exists it adds a general comment , if it does not exist then runs the code in the else statement where 
@@ -1663,7 +1665,6 @@ function Get-Projection {
                
         }
     }
-
         
     <#
 .Synopsis
