@@ -1668,7 +1668,7 @@ function Get-Projection {
         
     <#
 .Synopsis
-   Disable a user's 365 account
+   Disable a user's 365 account.  Will prevent user from logging in.
 .DESCRIPTION
    Will prompt for email address of user and disable after you give the 365 credentials
 .EXAMPLE
