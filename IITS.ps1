@@ -540,15 +540,15 @@ function hide-user-from-GAL
 .Synopsis
    Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
 .DESCRIPTION
-   Determine the root org (groupName) based on a given machine ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
+   Determine the root org (groupName) based on the local Kaseya ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
 .EXAMPLE
-   Get-EsetLink [-machName] my.machine.sccit
+   Get-EsetLink
 
    http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
 .INPUTS
    Logging (switch)
 .OUTPUTS
-   URL (string)
+   URL (string) or null
 .FUNCTIONALITY
    Downloads a URL link to an installer.
 #>
@@ -559,7 +559,6 @@ function Get-EsetLink
                   PositionalBinding=$false,
                   HelpUri = 'http://www.microsoft.com/',
                   ConfirmImpact='Medium')]
-    [Alias("Get-EsetAgent")]
     [OutputType([String])]
     Param
     (
@@ -577,6 +576,9 @@ function Get-EsetLink
 
         # Initialize the logs array.
         $logs = @()
+
+        # Initialize the URL varible.
+        $orgLink = $null
         
         # Verify the local PowerShell version is sufficient to actually run the main function.
         $logs += "$(Get-Date) - Checking installed PowerShell version for compatibility."
@@ -642,6 +644,9 @@ function Get-EsetLink
             }
         }
         else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
+        
+        # Output the container with the ESET link.
+        echo $orgLink
     }
 
     End
@@ -653,9 +658,6 @@ function Get-EsetLink
             foreach($log in $logs)
             {"$log" | Out-File -FilePath $LogPath -Force -Append}
         }
-        
-        # Output the container with the ESET link.
-        echo $orgLink
     }
 }
 
@@ -1591,8 +1593,8 @@ function Get-VSSStatistics
    the data is collected for it calculates the rate of change for a single day. It then projects the number of days in which the free space will be used completely.
    The script does not have any parameter, however it does use 2 other functions : Get-KaseyaMachineID and Email-MSAlarm.
    .EXAMPLE
-Get-Projection
-   #>
+    Get-Projection
+#>
 function Get-Projection {
     <# LOG FILE is created to output the information to.Log file exists at  C:\IITS_Mgmt\Temp\DiskInformation\logs.txt
     checks if the log file exist in the first if block, if it exists it adds a general comment , if it does not exist then runs the code in the else statement where 
@@ -1666,7 +1668,7 @@ function Get-Projection {
         }
     }
         
-    <#
+<#
 .Synopsis
    Disable a user's 365 account
 .DESCRIPTION
@@ -1881,3 +1883,135 @@ Managed Services Team"
         }
     }
 }
+
+<#
+.Synopsis
+   Automatically install ESET.
+.DESCRIPTION
+   Installs ESET Agent and either ESET Endpoint or ESET File Security (if workstation or server, accordingly). Will not install components that are already present. If there's any failure, will notify the user and Managed Services.
+.EXAMPLE
+   Install-Eset
+#>
+function Install-Eset
+{
+    [CmdletBinding()]
+    [Alias("Get-Eset")]
+    Param
+    (
+        # Optional switch to enable exporting of log file at completion of function.
+        [Switch]$logging
+    )
+
+    Begin
+    {
+        # Initialize the logs array
+        $logs = @()
+
+        # Initialize the killswitch
+        $kill = 0
+
+        # The Kaseya temp folder
+        $KasTemp = "C:\IITS_Mgmt\Temp"
+
+        # The download location of the ESET Agent
+        $agentPath = "$KasTemp\EsetAgent.msi"
+
+        # The download location of ESET Endpoint
+        $endPath = "$KasTemp\EsetEndpoint.msi"
+
+        # The download location of ESET File Security
+        $FSPath = "$KasTemp\EsetFS.msi"
+    }
+
+    Process
+    {
+        $logs += "$(Get-Date) - Checking installed PowerShell version."
+        if(Check-PSVersion)
+        {$logs += "$(Get-Date) - Installed PowerShell version ($($PSVersionTable.PSVersion.Major)) is outdated and incompatible."}
+
+        else
+        {
+            $logs += "$(Get-Date) - Checking if the ESET Agent is already installed."
+            if(!Check-EsetAgent)
+            {
+                $logs += "$(Get-Date) - Checking if the ESET Agent installer already exists."
+                if(!(Test-Path $agentPath))
+                {
+                    $logs += "$(Get-Date) - Fetching the ESET Agent download link."
+                    try
+                    {
+                        # If logging was called for this function, also call logging on sub-functions that have the option.
+                        if($logging){$link = Get-EsetLink -Logging}
+                        else{$link = Get-EsetLink}
+                    }
+                    catch {$logs += "$(Get-Date) - There was an unexpected error when fetching the ESET Agent download link: $($error[0])"}
+
+                    # Only process if Get-EsetLink actually returned a value.
+                    if($link -ne $null)
+                    {
+                        $logs += "$(Get-Date) - Downloading ESET Agent installer."
+                        try {wget -uri $link -OutFile $agentPath}
+                        catch {$logs += "$(Get-Date) - There was an error when attempting to download the ESET Agent installer: $($error[0])"}
+                    }
+                }
+
+                $logs += "$(Get-Date) - Installing the ESET Agent."
+                try
+                {
+                    
+                }
+                catch
+                {}
+
+            }
+            else {$logs += "$(Get-Date) - ESET Agent already installed."}
+
+            # DO NOT install AV if there's no Agent.
+            if(Check-EsetAgent)
+            {
+                $logs += "$(Get-Date) - Checking whether the machine is a server or workstation."
+                if(Check-MachineRole -eq "server")
+                {
+                
+                }
+            }
+            else {$logs += "$(Get-Date) - Cannot install ESET AV - ESET Agent is not installed."}
+        }
+    }
+
+    End
+    {
+        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+        if($logging)
+	    {
+		    $LogPath = "$env:windir\Temp\InstallEset_IITS.txt"
+    		foreach($log in $logs)
+    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+	    }
+    }
+}
+
+<#
+.Synopsis
+   Checks if ESET Agent is installed, returns TRUE if so.
+.DESCRIPTION
+   Test if the ESET Agent executable exists in the typical installation directory. If it exists, return TRUE, else FALSE.
+.EXAMPLE
+   Check-EsetAgent
+
+   True
+.OUTPUTS
+   Boolean
+#>
+function Check-EsetAgent
+{
+    Test-Path "$env:ProgramFiles\ESET\RemoteAdministrator\Agent\ERAAgent.exe"
+}
+
+function Install-EsetAgent{}
+function Check-MachineRole{}
+function Check-EsetEndpoint{}
+function Install-EsetEndpiont{}
+function Check-EsetFS{}
+function Install-EsetFS{}
+
