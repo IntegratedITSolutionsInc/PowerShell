@@ -1851,7 +1851,7 @@ Integrated IT Solutions
 781-742-2200 Option 2
 ITHelp@intgratedit.com"
 
-            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
+            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Managed.Services@integratedit.com -Bcc IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
         }
         else
         {
