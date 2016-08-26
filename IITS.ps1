@@ -1871,7 +1871,7 @@ function Send-PatchEmail
     {
         if($ErrorLog)
         {
-            $LogPath = "$env:windir\Temp\DeployDiskChanges_IITS.txt"
+            $LogPath = "$env:windir\Temp\patchemail_IITS.txt"
             foreach($booboo in $booboos)
             {
                 "$booboo" | Out-File -FilePath $LogPath -Force -Append
