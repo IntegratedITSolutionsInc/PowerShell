@@ -1840,14 +1840,16 @@ function Send-PatchEmail
             $Subject = "Reminder: Integrated IT Solutions is patching servers on $($patchtuesday | get-date -format D)."
             $Body = "Hi,
 
-            $Phrase $($patchtuesday | get-date -format D), is the fourth Tuesday of the month, so in accordance with our patching schedule, we will be patching your servers. Reboots will happen after hours starting at 9pm. Please respond back to this email if there are conflicts with patching your server(s) $Phrase, $($patchtuesday | get-date -format D)!
-            Any Machines which have been previously discussed as being excluded from patching will continue to be excluded until you tell us otherwise. As a reminder, workstatations are patched according to your agreed upon schedule as detailed in your Managed Services agreement.
-            Please contact your account manager if you would like to review or change any of your patching schedules.  Thank you for your continued support of our Managed Services Program!
+$Phrase $($patchtuesday | get-date -format D), is the fourth Tuesday of the month, so in accordance with our patching schedule, we will be patching your servers. Reboots will happen after hours starting at 9pm. Please respond back to this email if there are conflicts with patching your server(s) $Phrase, $($patchtuesday | get-date -format D)!
 
-            Managed Services Team
-            Integrated IT Solutions
-            781-742-2200 Option 2
-            ITHelp@intgratedit.com"
+Any Machines which have been previously discussed as being excluded from patching will continue to be excluded until you tell us otherwise. As a reminder, workstatations are patched according to your agreed upon schedule as detailed in your Managed Services agreement.
+
+Please contact your account manager if you would like to review or change any of your patching schedules.  Thank you for your continued support of our Managed Services Program!
+
+Managed Services Team
+Integrated IT Solutions
+781-742-2200 Option 2
+ITHelp@intgratedit.com"
 
             Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
         }
@@ -1859,11 +1861,11 @@ function Send-PatchEmail
         {
             $Subject_eng = "IMPORTANT!!!!  IITS CLIENT PATCHING IS HAPPENING TONIGHT!!!"
             $Body_eng = "Hi All,
-            $Phrase $($patchTuesday | get-date -format D) is the IITS client patching day.  THe vast majority of servers will be patched tonight starting at 9pm.  Reboots will happen after patching.  Please check Kaseya's Patch Management module if you have any questions pertaining to a specific client.
+$Phrase $($patchTuesday | get-date -format D) is the IITS client patching day.  THe vast majority of servers will be patched tonight starting at 9pm.  Reboots will happen after patching.  Please check Kaseya's Patch Management module if you have any questions pertaining to a specific client.
             
-            Thanks,
+Thanks,
             
-            Managed Services Team"
+Managed Services Team"
             Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Engineers@integratedit.com -Subject $Subject_eng -Body $Body_eng -Credential $Credentials
         }
     }
