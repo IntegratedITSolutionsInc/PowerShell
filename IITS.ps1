@@ -1808,6 +1808,8 @@ function Send-PatchEmail
     }
     Process
     {
+        $securepwd = Get-Content -Path 'C:\PatchEmail\Passwd.txt' | ConvertTo-SecureString
+        $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "Managed.Services",$securepwd
         if($patchTuesday.AddDays(-4).day -eq $currentdate.day)
         {
             $booboos += "$(Get-Date) - Found today is the Friday before patching."
@@ -1819,12 +1821,14 @@ function Send-PatchEmail
             $booboos += "$(Get-Date) - Found today is the Monday before patching."
             $Phrase = "Tomorrow"
             $email = $true
+
         }
         Elseif($patchTuesday.day -eq $currentdate.Day)
         {
             $booboos += "$(Get-Date) - Found today is the day of patching."
             $Phrase = "Today"
             $email = $true
+            $email_eng = $true
         }
         else
         {
@@ -1845,14 +1849,22 @@ function Send-PatchEmail
             781-742-2200 Option 2
             ITHelp@intgratedit.com"
 
-            $securepwd = Get-Content -Path 'C:\PatchEmail\Passwd.txt' | ConvertTo-SecureString
-            $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "Managed.Services",$securepwd
-
             Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
         }
         else
         {
             $booboos += "$(Get-Date) - Not Sending email since it's not the right day."
+        }
+        if($email_eng -eq $true)
+        {
+            $Subject_eng = "IMPORTANT!!!!  IITS CLIENT PATCHING IS HAPPENING TONIGHT!!!"
+            $Body_eng = "Hi All,
+            $Phrase $($patchTuesday | get-date -format D) is the IITS client patching day.  THe vast majority of servers will be patched tonight starting at 9pm.  Reboots will happen after patching.  Please check Kaseya's Patch Management module if you have any questions pertaining to a specific client.
+            
+            Thanks,
+            
+            Managed Services Team"
+            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Engineers@integratedit.com -Subject $Subject_eng -Body $Body_eng -Credential $Credentials
         }
     }
     End
