@@ -1835,8 +1835,10 @@ function Send-PatchEmail
             $booboos += "$(Get-Date) - Found today is not either of the right patching days."
             $email = $false
         }
-        if($email -eq $true)
+        if(($email -eq $true) -and ((Test-Path -Path 'C:\Dropbox (Managed Services)\Managed Services Team Folder\PatchingEmails\MarketingManagerSearch.csv') -eq $true))
         {
+            $booboos += "$(Get-Date) - Importing Email addresses from CSV."
+            $emails = Import-Csv -Path 'C:\Dropbox (Managed Services)\Managed Services Team Folder\PatchingEmails\MarketingManagerSearch.csv' | Select-Object -Property Email | % email
             $Subject = "Reminder: Integrated IT Solutions is patching servers on $($patchtuesday | get-date -format D)."
             $Body = "Hi,
 
@@ -1851,11 +1853,22 @@ Integrated IT Solutions
 781-742-2200 Option 2
 ITHelp@intgratedit.com"
 
-            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Managed.Services@integratedit.com -Bcc IITS_Patching_Clients@integratedit.com -Subject $Subject -Body $Body -Credential $Credentials
+            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Managed.Services@integratedit.com -Bcc $emails -Subject $Subject -Body $Body -Credential $Credentials
+        }
+        elseif((Test-Path -Path 'C:\Dropbox (Managed Services)\Managed Services Team Folder\PatchingEmails\MarketingManagerSearch.csv') -eq $false)
+        {
+            $booboos += "$(Get-Date) - Couldn't Find CSV file."
+            $Manage_Error_Subject = "Something went wrong sending patching email to all clients!!!"
+            $Manage_Error_Body = "The CSV file wasn't found!  This CSV file should be on the dropbox folder in the Managed Services Team Folder\PatchingEmails.  This is auto synched to kutil at location 'C:\Dropbox (Managed Services)\Managed Services Team Folder\PatchingEmails\MarketingManagerSearch.csv'!  Please check out file immediately!
+Thanks,
+
+Darren"
+            Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Managed.Services@integratedit.com -Subject $Manage_Error_Subject -Body $Manage_Error_Body -Credential $Credentials
         }
         else
         {
             $booboos += "$(Get-Date) - Not Sending email since it's not the right day."
+
         }
         if($email_eng -eq $true)
         {
