@@ -4,6 +4,9 @@ This file contains all of the functions that IITS distributes to all managed ser
 |---|---|
 |Add-ivantage-user|Michael Surtees
 |Check-EsetAgent|Antonio Vincentelli|
+|Check-EsetEndpoint|Antonio Vincentelli|
+|Check-EsetFS|Antonio Vincentelli|
+|Check-MachineRole|Antonio Vincentelli|
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|
 |Disable-365-Account|Michael Surtees|
@@ -24,9 +27,10 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-VSSStatistics|Darren Khan|
 |Hide-User-From-GAL|Michael Surtees|
 |Install-Eset|Antonio Vincentelli|
+|Install-EsetAgent|Antonio Vincentelli|
+|Install-EsetEndpoint|Antonio Vincentelli|
+|Install-EsetFS|Antonio Vincentelli|
 |Remove-Application|Darren Khan|
 |Remove-Outlook-Automap|Michael Surtees|
 |Send-PatchEmail|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
-
-

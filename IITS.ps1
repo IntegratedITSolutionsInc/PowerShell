@@ -1899,7 +1899,10 @@ function Install-Eset
     Param
     (
         # Optional switch to enable exporting of log file at completion of function.
-        [Switch]$logging
+        [Switch]$logging,
+
+        # Optional switch to enable creating a ticket if any problems occur.
+        [Switch]$ticket
     )
 
     Begin
@@ -1921,18 +1924,25 @@ function Install-Eset
 
         # The download location of ESET File Security
         $FSPath = "$KasTemp\EsetFS.msi"
+
+        # The location of all generated log files
+        $LogRoot = "$env:windir\Temp"
     }
 
     Process
     {
         $logs += "$(Get-Date) - Checking installed PowerShell version."
         if(Check-PSVersion)
-        {$logs += "$(Get-Date) - Installed PowerShell version ($($PSVersionTable.PSVersion.Major)) is outdated and incompatible."}
+        {
+            $logs += "$(Get-Date) - Installed PowerShell version ($($PSVersionTable.PSVersion.Major)) is outdated and incompatible."
+            $kill++
+        }
 
+        # Don't bother processing *anything* if installed PowerShell isn't compatible.
         else
         {
             $logs += "$(Get-Date) - Checking if the ESET Agent is already installed."
-            if(!Check-EsetAgent)
+            if(!(Check-EsetAgent))
             {
                 $logs += "$(Get-Date) - Checking if the ESET Agent installer already exists."
                 if(!(Test-Path $agentPath))
@@ -1944,24 +1954,34 @@ function Install-Eset
                         if($logging){$link = Get-EsetLink -Logging}
                         else{$link = Get-EsetLink}
                     }
-                    catch {$logs += "$(Get-Date) - There was an unexpected error when fetching the ESET Agent download link: $($error[0])"}
+                    catch
+                    {
+                        $logs += "$(Get-Date) - There was an unexpected error when fetching the ESET Agent download link: $($error[0])"
+                        $kill++
+                    }
 
                     # Only process if Get-EsetLink actually returned a value.
                     if($link -ne $null)
                     {
                         $logs += "$(Get-Date) - Downloading ESET Agent installer."
                         try {wget -uri $link -OutFile $agentPath}
-                        catch {$logs += "$(Get-Date) - There was an error when attempting to download the ESET Agent installer: $($error[0])"}
+                        catch
+                        {
+                            $logs += "$(Get-Date) - There was an error when attempting to download the ESET Agent installer: $($error[0])"
+                            $kill++
+                        }
                     }
                 }
 
                 $logs += "$(Get-Date) - Installing the ESET Agent."
                 try
                 {
-                    
+                    # If logging was called for this function, also call logging on sub-functions that have the option.
+                    if($logging){Install-EsetAgent -logging}
+                    else{Install-EsetAgent}
                 }
                 catch
-                {}
+                {$logs += "$(Get-Date) - There was a problem installing the ESET Agent: $($error[0])"}
 
             }
             else {$logs += "$(Get-Date) - ESET Agent already installed."}
@@ -1972,10 +1992,34 @@ function Install-Eset
                 $logs += "$(Get-Date) - Checking whether the machine is a server or workstation."
                 if(Check-MachineRole -eq "server")
                 {
-                
+                    # Variable to be used for ticket creation (see End block)
+                    $role = "srv"
+
+                    $logs += "$(Get-Date) - Installing ESET File Security."
+                    try
+                    {
+                        # If logging was called for this function, also call logging on sub-functions that have the option.
+                        if($logging){Install-EsetFS -logging}
+                        else{Install-EsetFS}
+                    }
+                    catch{$logs += "$(Get-Date) - There was a problem installing ESET File Security: $($error[0])"}
+                }
+                else
+                {
+                    # Variable to be used for ticket creation (see End block)
+                    $role = "wks"
+                    
+                    $logs += "$(Get-Date) - Installing ESET Endpoint."
+                    try
+                    {
+                        # If logging was called for this function, also call logging on sub-functions that have the option.
+                        if($logging){Install-EsetEndpiont -logging}
+                        else{Install-EsetEndpiont}
+                    }
+                    catch{$logs += "$(Get-Date) - There was a problem installing ESET Endpoint: $($error[0])"}
                 }
             }
-            else {$logs += "$(Get-Date) - Cannot install ESET AV - ESET Agent is not installed."}
+            else {$logs += "$(Get-Date) - Cannot install an ESET AV - ESET Agent is not installed."}
         }
     }
 
@@ -1988,6 +2032,24 @@ function Install-Eset
     		foreach($log in $logs)
     		{"$log" | Out-File -FilePath $LogPath -Force -Append}
 	    }
+
+        # (Optional) Send an e-mail to MSAlarm to create a ticket.
+        if(($ticket) -and ($kill -ne 0))
+        {
+            if($logging){
+                # Use these log files if ESET was pushed on a server.
+                if($role -eq "srv"){$logfiles = $LogPath,"$LogRoot\InstallEsetAgent_IITS.txt","$LogRoot\InstallEsetFS_IITS.txt"}
+                # Use these log files if ESET was pusehd on a workstation.
+                elseif($role -eq "wks"){$logfiles = $LogPath,"$LogRoot\InstallEsetAgent_IITS.txt","$LogRoot\InstallEsetEndpoint_IITS.txt"}
+                # Use just this log file if ESET push aborted for any reason.
+                else{$logfiles = $LogPath}
+
+                # Sends an alert to MSAlarm, which will make a ticket. DOES include the log files as attachments.
+                Email-MSalarm -Body "ESET install failed on $(Get-KaseyaMachineID). See Documents for attached logs." -Attachment $logfiles
+            }
+            # Sends an alert to MSAlarm, which will make a ticket. DOES NOT include the log files as attachments.
+            else{Email-MSalarm -Body "ESET install failed on $(Get-KaseyaMachineID)."}
+        }
     }
 }
 
@@ -2008,10 +2070,12 @@ function Check-EsetAgent
     Test-Path "$env:ProgramFiles\ESET\RemoteAdministrator\Agent\ERAAgent.exe"
 }
 
-function Install-EsetAgent{}
+function Install-EsetAgent{
+Param([Switch]$logging)}
 function Check-MachineRole{}
 function Check-EsetEndpoint{}
-function Install-EsetEndpiont{}
+function Install-EsetEndpiont{
+Param([Switch]$logging)}
 function Check-EsetFS{}
-function Install-EsetFS{}
-
+function Install-EsetFS{
+Param([Switch]$logging)}
