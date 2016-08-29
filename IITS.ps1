@@ -1894,3 +1894,16 @@ Managed Services Team"
         }
     }
 }
+
+<#
+.Synopsis - script to create task through powershell. This is a specific task for USPG. The script is put here as it could not be pushed through Agent procedure
+.Description - The script registers a task by the name rebootpopup with the ps1 file and the triggers and options
+.example - Register-ScheduledJob 
+#>
+
+function Create-USPGtaskrebootpopup {
+    $date = Get-date
+    $trigger = New-JobTrigger -Once -At $date -RepetitionInterval (New-TimeSpan -hours 1) -RepeatIndefinitely
+    $option = New-ScheduledJobOption -ContinueIfGoingOnBattery -StartIfOnBattery
+    Register-ScheduledJob -name rebootpopup -FilePath C:\IITS_Mgmt\Temp\patchreboot\rebootscript1.ps1 -Trigger $trigger -ScheduledJobOption $option
+}
