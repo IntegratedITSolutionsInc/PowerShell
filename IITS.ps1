@@ -1,7 +1,7 @@
 ﻿<#
 .Synopsis
    This function will find the Kaseya Machine ID of the computer.  It will find the computer name if there is no kaseya agent installed.
-.DESCRIPTION
+.DESCRIPTION.
    This function checks the registry for the Kaseya Machine ID.  It can be used in other scripts to find the name.
 .EXAMPLE
   Get-KaseyaMachineID
