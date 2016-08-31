@@ -1,5 +1,5 @@
 [Param()]
-[Switch]$Logging
+[Switch]$logging
 
 Begin
 {
@@ -13,7 +13,7 @@ Process
 
 End
 {
-	if($Logging)
+	if($logging)
 	{
 		$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
 		foreach($log in $logs)
