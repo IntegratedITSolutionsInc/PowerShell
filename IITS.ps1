@@ -5,40 +5,24 @@
    This function checks the registry for the Kaseya Machine ID.  It can be used in other scripts to find the name.
 .EXAMPLE
   Get-KaseyaMachineID
-.EXAMPLE
-   Another example of how to use this cmdlet
 #>
 function Get-KaseyaMachineID
 {
     [CmdletBinding()]
     [Alias()]
     [OutputType([int])]
-    Param
-    (
-    )
-    Begin
-    {
-    }
+    Param()
+    
     Process
     {
         try
         {
             if($(Get-Process -Name AgentMon -ErrorAction SilentlyContinue).Name)
-            { 
-                $(Get-ItemProperty -Path "HKLM:\Software\WOW6432Node\Kaseya\Agent\INTTSL74824010499872" -Name MachineID -ErrorAction Stop -ErrorVariable CurrentError).MachineID
-            }
-            Else
-            {
-                $env:computername
-            }
+                {$(Get-ItemProperty -Path "HKLM:\Software\WOW6432Node\Kaseya\Agent\INTTSL74824010499872" -Name MachineID -ErrorAction Stop -ErrorVariable CurrentError).MachineID}
+            Else{$env:computername}
         }
         Catch
-        {
-            $env:computername
-        }   
-    }
-    End
-    {
+        {$env:computername}   
     }
 }
 
@@ -46,7 +30,9 @@ function Get-KaseyaMachineID
 .Synopsis
    This script emails MSAlarm@integratedit.com.
 .DESCRIPTION
-   This scipt needs 1 parameter to work.  It requires the subject.  An optional attachment parameter can be used if you wish to attach a file. 
+   This scipt creates an authentication token based on two credential files on the local machine, then connects to our email server and sends a message to MSAlarm. It provides a specific subject but requires the body. An optional Attachment parameter can be used to attach a file, and the optional Logging switch will output a log file at the end of execution. 
+.EXAMPLE
+   Email-MSalarm "This is my Email"
 .EXAMPLE
    Email-MSalarm -Body "This is my Email" -Attachment "C:\Foo.txt"
 #>
@@ -55,68 +41,112 @@ function Email-MSalarm
     [CmdletBinding()]
     Param
     (
+        # Body of the e-mail to be sent out.
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
         $Body,
 
+        # Any attachments (separated by commas, no space; enclose each filepath in quotes if necessary, but *not* the whole list of paths).
         [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
-        $Attachment
+        $Attachment,
+
+        # Optional switch to create a log file at completion of the function.
+        [Parameter(Mandatory=$false, Position=2)]
+        [Switch]$Logging
     )
 
     Begin
     {
-        try
-        {
+        # Initialize the logs array
+        $logs = @()
+        
+        # Initialize the killswitch
+        $kill = 0
+
+        # Container for -ErrorVariable
         $CurrentError = $null
-        $ErrorLog = "$env:windir\Temp\EmailMSalarm_IITS.txt"
-        $key = Get-Content "C:\IITS_Scripts\Key.key" -ErrorAction Stop -ErrorVariable CurrentError
-        $password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key -ErrorAction Stop -ErrorVariable CurrentError
-        $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "forecast@integratedit.com",$password
-        }
-        Catch
+        
+        # Verify the key file exists
+        if(Test-Path "C:\IITS_Scripts\Key.key")
         {
-        "$(Get-Date) - Couldn't get a variable.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
+            $logs += "$(Get-Date) - Importing the key file."
+            try{$key = Get-Content "C:\IITS_Scripts\Key.key" -ErrorAction Stop -ErrorVariable CurrentError}
+            catch
+            {
+                $logs += "$(Get-Date) - Could not import key file. Error: $CurrentError"
+                $kill++
+            }
+        }
+        else
+        {
+            $logs += "$(Get-Date) - Key file does not exist in expected location."
+            $kill++
+        }
+
+        # Verify the password file exists
+        if(Test-Path "C:\IITS_Scripts\passwd.txt")
+        {
+            $logs += "$(Get-Date) - Importing and securing the password file."
+            try{$password = Get-Content "C:\IITS_Scripts\passwd.txt" | ConvertTo-SecureString -Key $key -ErrorAction Stop -ErrorVariable CurrentError}
+            catch
+            {
+                $logs += "$(Get-Date) - There was a problem with the password file. Error: $CurrentError"
+                $kill++
+            }
+        }
+        else
+        {
+            $logs += "$(Get-Date) - Password file does not exist in expected location."
+            $kill++
+        }
+
+        # Create a credential token
+        $logs += "$(Get-Date) - Creating credential token."
+        try{$credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "forecast@integratedit.com",$password}
+        catch
+        {
+            $logs += "$(Get-Date) - Could not create credential token. Error: $($error[0])"
+            $kill++
         }
     }
+
     Process
     {
-        if(!$CurrentError)
+        # Do not execute anything if there have been any errors so far.
+        if($kill -eq 0)
         {
             if($Attachment)
+            {
+                # Verify all listed attachments actually exist.
+                $AttachCleanList = @()
+                $logs += "$(Get-Date) - Checking validity of attachments."
+                foreach($item in $Attachment)
                 {
-            Try
-                {
-                    Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "
-                    {Script}
-        
-                    $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $Attachment -ErrorAction Stop -ErrorVariable CurrentError
+                    if(Test-Path $item){$AttachCleanList += $item}
+                    else{$logs += "$(Get-Date) - Attempted file '$item' does not exist or could not be reached."}
                 }
-            Catch
-                {
-                    "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
-                }
-        }
+                
+                # Send the e-mail, with the verified list of attachments.
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $AttachCleanList -ErrorAction Stop -ErrorVariable CurrentError}
+                Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
+            }
             Else
-                {
-            Try
             {
-                Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "
-                {Script}
-        
-                $Body"  -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError
-            }
-            Catch
-            {
-                "$(Get-Date) - Couldn't email.  Error= $CurrentError ." | Out-File -FilePath $ErrorLog -Force -Append
+                # Send the e-mail, no attachments.
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError}
+                Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
             }
         }
-        }
-        Else
-        {
-            "$(Get-Date) - Skipped process block due to not having the key file or the password.  Error = $CurrentError" | Out-File -FilePath $ErrorLog -Force -Append
-        }
+        Else{$logs += "$(Get-Date) - Skipped Process block due to previous errors. Number of killswitch triggers: $kill"}
     }
+
     End
     {
+        if($Logging)
+	    {
+		    $LogPath = "$env:windir\Temp\EmailMSalarm_IITS.txt"
+    		foreach($log in $logs)
+    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+    	}
     }
 }
 
