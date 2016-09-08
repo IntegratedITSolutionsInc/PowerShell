@@ -5,6 +5,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Add-ivantage-user|Michael Surtees
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|
+|Create-LocalAdministrator|Arjun Gheek|
 |Disable-365-Account|Michael Surtees|
 |Deploy-GetDiskChanges|Darren Khan|
 |Email-MSalarm|Darren Khan|
@@ -16,6 +17,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-DriveStatistics|Darren Khan|
 |Get-EsetLink|Antonio Vincentelli|
 |Get-InstalledPrograms|Darren Khan|
+|Get-iitstaskpswd|Arjun Gheek|
 |Get-KaseyaMachineID|Darren Khan|
 |Get-MailFlowStats|Darren Khan|
 |Get-Projection|Arjun Gheek|
@@ -27,5 +29,6 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Send-PatchEmail|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
 |Create-USPGtaskrebootpopup|
+
 
 
