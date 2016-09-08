@@ -1774,7 +1774,9 @@ function Deploy-GetDiskChanges
                 $settings = New-ScheduledTaskSettingsSet -Priority 10
                 try
                 {
-                    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User <#Username goes here!!!!#> -Password <#Password goes here#> -Description "This gathers disk information every 10 minutes." -Settings $settings -ErrorAction Stop
+                    $creds = Create-LocalAdministrator
+                    $ps = get-iitstaskpswd
+                    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User $creds.username -Password $ps -Description "This gathers disk information every 10 minutes." -Settings $settings -ErrorAction Stop
                 }
                 Catch
                 {
@@ -1937,3 +1939,89 @@ function Create-USPGtaskrebootpopup {
     $option = New-ScheduledJobOption -ContinueIfGoingOnBattery -StartIfOnBattery
     Register-ScheduledJob -name rebootpopup -FilePath C:\IITS_Mgmt\Temp\patchreboot\rebootscript1.ps1 -Trigger $trigger -ScheduledJobOption $option
 }
+
+<#
+.Synopsis - The function creates a Account by the name of "iitstask" that will create a Local Administrator Account on the machine and set a random password of 10 characters
+.Description - The function uses the net user command to generate an account and assign a password and it then outputs the password as a secure string under IITS_Scripts folder
+The script will output a log file under C:\Windows\Temp\createLocalAdminLogs.txt which will tell us if the iitstask account was created, what password was assigned etc.
+.example - Create-LocalAdministrator
+.example - $credentials = Create-LocalAdministrator then $credentials.username will be the iitstask Username. To get the password for this username create another variable that 
+will run another function get-iitstaskpswd and forward it in a variable like $password = get-iitstaskpswd. The $password will be the plain text password for iitstask account.
+#>
+
+function Create-LocalAdministrator {
+                    $accountchk = net localgroup administrators
+                    $output += "$(Get-Date) - List of local accounts is $($accountchk)."
+                    
+                    <# Test if the iitstask Account already exist #>
+                    if ($accountchk -ccontains 'iitstask') 
+                    { 
+                        $output += "$(Get-Date) - iitstask Account Exists."
+                        if (Test-Path C:\IITS_Scripts\eTskPswd.txt) 
+                        { 
+                            $output += "$(Get-Date) - file eTskPswd.txt exists."
+                            $epassword = Get-Content C:\IITS_Scripts\eTskPswd.txt | ConvertTo-SecureString -AsPlainText -Force
+                            $output += "$(Get-Date) - iitstask Account and the encrypted password file Exists."
+                            $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "iitstask",$epassword
+                            $output += "$(Get-Date) - Since the account and the password exist, creds are passed to the credential variable"
+                            $output | Out-File -Append C:\Windows\Temp\createLocalAdminLogs.txt
+                        }
+                        else 
+                        {
+                            $output += "$(Get-Date) - file eTskPswd.txt DOES NOT exists."
+                            <# need to create a new password and assign to user iitstask #>
+                            $password = -join ((65..90) + (97..122) + (48..57) + (40..46) | Get-Random -Count 10 | %{[char]$_})
+                            $output += "$(Get-Date) - Password created because the eTskPswd file did not exist."
+                            net user iitstask $password <# where password is the new password  #>
+                             $output += "$(Get-Date) - iitstask user is assigned the new password"
+                            $password | ConvertTo-SecureString -AsPlainText -Force | ConvertFrom-SecureString | Out-File "C:\IITS_Scripts\eTskPswd.txt"
+                            $output += "$(Get-Date) - since password file did not exist new file created and passsword is encrypted and sent to txt file"
+                            $epassword = Get-Content C:\IITS_Scripts\eTskPswd.txt | ConvertTo-SecureString -AsPlainText -Force
+                             $output += "$(Get-Date) - password taken from the text file eTskPswd and decrypted"
+                            $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "iitstask",$epassword -ErrorVariable ca
+                             $output += "$(Get-Date) - credentials object created with username and the encrypted password"
+                             $output | Out-File -Append Out-File C:\Windows\Temp\createLocalAdminLogs.txt
+                        }
+                    }
+                    else 
+                    {
+                            $output += "Account doesn't exist executing else statement." 
+                            $output += "If the eTskPswd file existed, it was removed"
+                            Remove-Item C:\IITS_Scripts\eTskPswd.txt -ErrorAction SilentlyContinue
+                            $output += "$(Get-Date) - iitstask Account does not exist, creating a random password"
+                            $password = -join ((65..90) + (97..122) + (48..57) + (40..46) | Get-Random -Count 10 | %{[char]$_})
+                            $output += "$(Get-Date) - $password- random password created"
+                            net user /add iitstask "$password" 
+                            $output += "$(Get-Date) - iitstask user is created, password assigned"
+                            net localgroup administrators iitstask /add 
+                            $output += "$(Get-Date) - iitstask Account added to localgroup administrators."
+                            $password | ConvertTo-SecureString -AsPlainText -Force | ConvertFrom-SecureString | Out-File "C:\IITS_Scripts\eTskPswd.txt"
+                            $output += "$(Get-Date) - iitstask Account password encrypted and forwarded to etskpswd file."
+                            $epassword = Get-Content C:\IITS_Scripts\eTskPswd.txt | ConvertTo-SecureString -AsPlainText -Force
+                            $output += "$(Get-Date) - iitstask Account password converted back to secure string."
+                            $credentials = new-object -typename System.Management.Automation.PSCredential -argumentlist "iitstask",$epassword -ErrorVariable ca
+                            $output += "$(Get-Date) - iitstask Account and password forwarded to the credentials variable $credentials"
+                            $output | Out-File C:\Windows\Temp\createLocalAdminLogs.txt
+                        }
+                     
+                 return $credentials
+                 
+                  }
+
+                 
+                    
+
+<#
+.Synopsis - The function will get the unencrypted plain text password for the iitstask account
+.Description - The function gets the encrypted password of the iitstask account from the text file eTskPswd.txt that exixt at the IITS_Script folder, decrypts it and returns an unencrypted plain text password
+.example : To get this password in any script forward the function to a variable example $a = get-iitstaskpswd, then $a will be the plain text password for iitstask account
+#>
+function get-iitstaskpswd {
+        $epswd = Get-Content C:\IITS_Scripts\eTskPswd.txt 
+        $secpswd = ConvertTo-SecureString $epswd 
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secpswd)
+        $unsecpswd = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+        $output = "$unsecpswd is the password for the account"
+        return $unsecpswd
+}
+
