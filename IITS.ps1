@@ -1981,7 +1981,10 @@ function Install-Eset
                     else{Install-EsetAgent}
                 }
                 catch
-                {$logs += "$(Get-Date) - There was a problem installing the ESET Agent: $($error[0])"}
+                {
+                    $logs += "$(Get-Date) - There was a problem installing the ESET Agent: $($error[0])"
+                    $kill++
+                }
 
             }
             else {$logs += "$(Get-Date) - ESET Agent already installed."}
@@ -2002,7 +2005,11 @@ function Install-Eset
                         if($logging){Install-EsetFS -logging}
                         else{Install-EsetFS}
                     }
-                    catch{$logs += "$(Get-Date) - There was a problem installing ESET File Security: $($error[0])"}
+                    catch
+                    {
+                        $logs += "$(Get-Date) - There was a problem installing ESET File Security: $($error[0])"
+                        $kill++
+                    }
                 }
                 else
                 {
@@ -2016,10 +2023,17 @@ function Install-Eset
                         if($logging){Install-EsetEndpiont -logging}
                         else{Install-EsetEndpiont}
                     }
-                    catch{$logs += "$(Get-Date) - There was a problem installing ESET Endpoint: $($error[0])"}
+                    catch{
+                        $logs += "$(Get-Date) - There was a problem installing ESET Endpoint: $($error[0])"
+                        $kill++
+                    }
                 }
             }
-            else {$logs += "$(Get-Date) - Cannot install an ESET AV - ESET Agent is not installed."}
+            else
+            {
+                $logs += "$(Get-Date) - Cannot install an ESET AV - ESET Agent is not installed."
+                $kill++
+            }
         }
     }
 
@@ -2036,7 +2050,8 @@ function Install-Eset
         # (Optional) Send an e-mail to MSAlarm to create a ticket.
         if(($ticket) -and ($kill -ne 0))
         {
-            if($logging){
+            if($logging)
+            {
                 # Use these log files if ESET was pushed on a server.
                 if($role -eq "srv"){$logfiles = $LogPath,"$LogRoot\InstallEsetAgent_IITS.txt","$LogRoot\InstallEsetFS_IITS.txt"}
                 # Use these log files if ESET was pusehd on a workstation.
@@ -2070,12 +2085,90 @@ function Check-EsetAgent
     Test-Path "$env:ProgramFiles\ESET\RemoteAdministrator\Agent\ERAAgent.exe"
 }
 
-function Install-EsetAgent{
-Param([Switch]$logging)}
+<#
+.Synopsis
+   Install the ESET Agent.
+.DESCRIPTION
+   Looks for a specific ESET Agent installer in an expected directory and attempts to execute it silently.
+#>
+function Install-EsetAgent
+{
+    Param
+    (
+        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetAgent_IITS.txt".
+        [Switch]$logging
+    )
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # ESET Agent installer path.
+        $AgentPath = "C:\IITS_Mgmt\Temp\EsetAgent.msi"
+    }
+    
+    Process
+    {
+        $logs += "$(Get-Date) - Verifying ESET Agent installer exists."
+        if(Test-Path $AgentPath)
+        {
+            $logs += "$(Get-Date) - Attempting to install ESET Agent."
+            try{msiexec /i $AgentPath /qn REBOOT="ReallySuppress"}
+            catch{$logs += "$(Get-Date) - Could not install ESET Agent. Error: $($error[0])"}
+        }
+        else{$logs += "$(Get-Date) - Expected ESET Agent installer does not exist."}
+        
+    }
+
+    End
+    {
+        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+    	if($logging)
+    	{
+    		$LogPath = "$env:windir\Temp\InstallEsetAgent_IITS.txt"
+    		foreach($log in $logs)
+    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+    	}
+    }
+}
+
 function Check-MachineRole{}
-function Check-EsetEndpoint{}
-function Install-EsetEndpiont{
-Param([Switch]$logging)}
-function Check-EsetFS{}
-function Install-EsetFS{
-Param([Switch]$logging)}
+
+<#
+.Synopsis
+   Checks if ESET Endpoint is installed, returns TRUE if so.
+.DESCRIPTION
+   Test if the ESET Endpoint executable exists in the typical installation directory. If it exists, return TRUE, else FALSE.
+.EXAMPLE
+   Check-EsetEndpoint
+
+   True
+.OUTPUTS
+   Boolean
+#>
+function Check-EsetEndpoint
+{
+    Test-Path "$env:ProgramFiles\ESET\ESET Endpoint Antivirus\egui.exe"
+}
+
+function Install-EsetEndpiont{Param([Switch]$logging)}
+
+<#
+.Synopsis
+   Checks if ESET File Security is installed, returns TRUE if so.
+.DESCRIPTION
+   Test if the ESET File Security executable exists in the typical installation directory. If it exists, return TRUE, else FALSE.
+.EXAMPLE
+   Check-EsetFS
+
+   True
+.OUTPUTS
+   Boolean
+#>
+function Check-EsetFS
+{
+    Test-Path "$env:ProgramFiles\ESET\ESET File Security\egui.exe"
+}
+
+function Install-EsetFS{Param([Switch]$logging)}
