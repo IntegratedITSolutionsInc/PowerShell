@@ -1,7 +1,7 @@
 ﻿<#
 .Synopsis
    This function will find the Kaseya Machine ID of the computer.  It will find the computer name if there is no kaseya agent installed.
-.DESCRIPTION
+.DESCRIPTION.
    This function checks the registry for the Kaseya Machine ID.  It can be used in other scripts to find the name.
 .EXAMPLE
   Get-KaseyaMachineID
@@ -2023,5 +2023,22 @@ function get-iitstaskpswd {
         $unsecpswd = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
         $output = "$unsecpswd is the password for the account"
         return $unsecpswd
+}
+Function Lock-User-Computer
+{
+<#
+.DESCRIPTION
+	Function to Lock a user's computer remotely
+.SYNOPSIS
+	Function to Lock a computer...if already locked this will do nothing
+#>
+	
+$signature = @"
+[DllImport("user32.dll", SetLastError = true)]
+public static extern bool LockWorkStation();
+"@
+
+$LockComputer = Add-Type -memberDefinition $signature -name "Win32LockWorkStation" -namespace Win32Functions -passthru
+$LockComputer::LockWorkStation() | Out-Null
 }
 
