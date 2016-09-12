@@ -29,6 +29,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Send-PatchEmail|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
 |Create-USPGtaskrebootpopup|
+|Lock-User-Computer|Michael Surtees|
 
 
 
