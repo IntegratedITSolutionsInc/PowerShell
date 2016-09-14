@@ -2089,7 +2089,7 @@ function Check-EsetAgent
 .Synopsis
    Install the ESET Agent.
 .DESCRIPTION
-   Looks for a specific ESET Agent installer in an expected directory and attempts to execute it silently.
+   Looks for a specific ESET Agent installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET Agent already installed (will cause repair or in-place upgrade if so).
 #>
 function Install-EsetAgent
 {
@@ -2114,7 +2114,16 @@ function Install-EsetAgent
         if(Test-Path $AgentPath)
         {
             $logs += "$(Get-Date) - Attempting to install ESET Agent."
-            try{msiexec /i $AgentPath /qn REBOOT="ReallySuppress"}
+            try
+            {
+                msiexec /i $AgentPath /qn REBOOT="ReallySuppress"
+
+                # Give the procedure time to actually install.
+                sleep 30
+
+                # Verify if agent was installed or not.
+                if(Check-EsetAgent){$logs += "$(Get-Date) - ESET Agent is installed."}
+            }
             catch{$logs += "$(Get-Date) - Could not install ESET Agent. Error: $($error[0])"}
         }
         else{$logs += "$(Get-Date) - Expected ESET Agent installer does not exist."}
