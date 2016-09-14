@@ -2087,7 +2087,7 @@ function Check-EsetAgent
 
 <#
 .Synopsis
-   Install the ESET Agent.
+   Installs the ESET Agent.
 .DESCRIPTION
    Looks for a specific ESET Agent installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET Agent already installed (will cause repair or in-place upgrade if so).
 #>
@@ -2161,7 +2161,62 @@ function Check-EsetEndpoint
     Test-Path "$env:ProgramFiles\ESET\ESET Endpoint Antivirus\egui.exe"
 }
 
-function Install-EsetEndpiont{Param([Switch]$logging)}
+<#
+.Synopsis
+   Installs ESET Endpoint.
+.DESCRIPTION
+   Looks for a specific ESET Endpoint installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET Endpoint already installed (will cause repair or in-place upgrade if so).
+#>
+function Install-EsetEndpoint
+{
+    Param
+    (
+        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetEndpoint_IITS.txt".
+        [Switch]$logging
+    )
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # ESET Endpoint installer path.
+        $EndpointPath = "C:\IITS_Mgmt\Temp\EsetEndpoint.msi"
+    }
+    
+    Process
+    {
+        $logs += "$(Get-Date) - Verifying ESET Endpoint installer exists."
+        if(Test-Path $EndpointPath)
+        {
+            $logs += "$(Get-Date) - Attempting to install ESET Endpoint."
+            try
+            {
+                msiexec /i $EndpointPath /qn REBOOT="ReallySuppress"
+
+                # Give the procedure time to actually install.
+                sleep 30
+
+                # Verify if Endpoint was installed or not.
+                if(Check-EsetEndpoint){$logs += "$(Get-Date) - ESET Endpoint is installed."}
+            }
+            catch{$logs += "$(Get-Date) - Could not install ESET Endpoint. Error: $($error[0])"}
+        }
+        else{$logs += "$(Get-Date) - Expected ESET Endpoint installer does not exist."}
+        
+    }
+
+    End
+    {
+        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+    	if($logging)
+    	{
+    		$LogPath = "$env:windir\Temp\InstallEsetEndpoint_IITS.txt"
+    		foreach($log in $logs)
+    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+    	}
+    }
+}
 
 <#
 .Synopsis
@@ -2180,4 +2235,59 @@ function Check-EsetFS
     Test-Path "$env:ProgramFiles\ESET\ESET File Security\egui.exe"
 }
 
-function Install-EsetFS{Param([Switch]$logging)}
+<#
+.Synopsis
+   Installs the ESET File Security.
+.DESCRIPTION
+   Looks for a specific ESET File Security installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET File Security already installed (will cause repair or in-place upgrade if so).
+#>
+function Install-EsetFS
+{
+    Param
+    (
+        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetFS_IITS.txt".
+        [Switch]$logging
+    )
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # ESET File Security installer path.
+        $FSPath = "C:\IITS_Mgmt\Temp\EsetFS.msi"
+    }
+    
+    Process
+    {
+        $logs += "$(Get-Date) - Verifying ESET File Security installer exists."
+        if(Test-Path $FSPath)
+        {
+            $logs += "$(Get-Date) - Attempting to install ESET File Security."
+            try
+            {
+                msiexec /i $FSPath /qn REBOOT="ReallySuppress"
+
+                # Give the procedure time to actually install.
+                sleep 30
+
+                # Verify if FS was installed or not.
+                if(Check-EsetFS){$logs += "$(Get-Date) - ESET File Security is installed."}
+            }
+            catch{$logs += "$(Get-Date) - Could not install ESET File Security. Error: $($error[0])"}
+        }
+        else{$logs += "$(Get-Date) - Expected ESET File Security installer does not exist."}
+        
+    }
+
+    End
+    {
+        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+    	if($logging)
+    	{
+    		$LogPath = "$env:windir\Temp\InstallEsetFS_IITS.txt"
+    		foreach($log in $logs)
+    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+    	}
+    }
+}
