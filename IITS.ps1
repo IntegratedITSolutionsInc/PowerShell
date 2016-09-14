@@ -2142,8 +2142,6 @@ function Install-EsetAgent
     }
 }
 
-function Check-MachineRole{}
-
 <#
 .Synopsis
    Checks if ESET Endpoint is installed, returns TRUE if so.
@@ -2289,5 +2287,47 @@ function Install-EsetFS
     		foreach($log in $logs)
     		{"$log" | Out-File -FilePath $LogPath -Force -Append}
     	}
+    }
+}
+
+<#
+.Synopsis
+   Determines if Windows machine is server or workstation. Returns "server", "workstation", or "cannot determine".
+.DESCRIPTION
+   Looks up the host machine's OS and checks it against a list of known OSes. Recognized Windows OSes will return "server" or "workstation"; anything else (including unrecognized Windows OSes) will return "cannot determine".
+.EXAMPLE
+   Executed on Windows 10:
+    Check-MachineRole
+
+    workstation
+.EXAMPLE
+   Executed on a Mac:
+    Check-MachineRole
+
+    cannot determine
+.OUTPUTS
+   string ("server","workstation", or "cannot determine")
+.FUNCTIONALITY
+   Primarily used as a helper function when there is a need to differentiate between a server and a workstation host without foreknowledge, 
+   such as running one of two installers (server or workstation version) without having direct access to or knowledge of either.
+#>
+function Check-MachineRole
+{
+    [Alias("cmr","Get-Role")]
+    [OutputType([String])]
+    Param
+    ()
+
+    Begin
+    {
+        
+    }
+    Process
+    {
+        
+    }
+    End
+    {
+        
     }
 }
