@@ -20,3 +20,10 @@ $parts=$IEVersionString.split($sep)
 # Parts[0] is the answer:
 $parts[0]
  
+ # Pin a shortcut to the TaskBar
+$shell = new-object -com "Shell.Application" 
+$folder = $shell.Namespace('C:\Program Files\Microsoft Office 15\root\office15')   
+$item = $folder.Parsename('winword.exe')
+$verb = $item.Verbs() | ? {$_.Name -eq 'Pin to Tas&kbar'}
+if ($verb) {$verb.DoIt()}
+
