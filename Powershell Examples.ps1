@@ -10,3 +10,6 @@ new-item -path HKLM:\software\motive\m-files\10.2.3920.54\client\mfofficeaddin -
 # List installed apps in a table
 Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher, InstallDate | 
 Format-Table –AutoSize
+
+#####
+
