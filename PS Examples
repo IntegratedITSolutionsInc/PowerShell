@@ -27,3 +27,8 @@ $item = $folder.Parsename('winword.exe')
 $verb = $item.Verbs() | ? {$_.Name -eq 'Pin to Tas&kbar'}
 if ($verb) {$verb.DoIt()}
 
+# Mount an ISO
+Mount-DiskImage -ImagePath <imagePath>
+
+
+
