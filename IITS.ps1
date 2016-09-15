@@ -42,16 +42,19 @@ function Email-MSalarm
     Param
     (
         # Body of the e-mail to be sent out.
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         $Body,
 
         # Any attachments (separated by commas, no space; enclose each filepath in quotes if necessary, but *not* the whole list of paths).
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         $Attachment,
 
         # Optional switch to create a log file at completion of the function.
-        [Parameter(Mandatory=$false, Position=2)]
-        [Switch]$Logging
+        [Parameter(Mandatory=$false)]
+        [Switch]$Logging,
+        
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        $Subject
     )
 
     Begin
@@ -126,13 +129,13 @@ function Email-MSalarm
                 }
                 
                 # Send the e-mail, with the verified list of attachments.
-                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $AttachCleanList -ErrorAction Stop -ErrorVariable CurrentError}
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject $(if(!$Subject){"[$(Get-KaseyaMachineID)] - Emailed from Powershell Script."}else{$Subject}) -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -Port 587 -From forecast@integratedit.com -Attachments $AttachCleanList -ErrorAction Stop -ErrorVariable CurrentError}
                 Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
             }
             Else
             {
                 # Send the e-mail, no attachments.
-                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError}
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject $(if(!$Subject){"[$(Get-KaseyaMachineID)] - Emailed from Powershell Script."}else{$Subject}) -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -Port 587 -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError}
                 Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
             }
         }
