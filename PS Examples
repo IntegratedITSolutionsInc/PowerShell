@@ -33,6 +33,8 @@ Mount-DiskImage -ImagePath <imagePath>
 # Wait for an app to finish/close
 $notepad_launch = new-object Diagnostics.ProcessStartInfo$notepad_launch.FileName = "C:\WINDOWS\system32\notepad.exe"$notepad_launch.Arguments = $notepad_switches$notepad_process = [Diagnostics.Process]::Start($notepad_launch)$notepad_process.WaitForExit()
 
+# 
+
 
 
 
