@@ -7,5 +7,7 @@ Add-MailboxPermission -Identity ahchm@chartis.com -User npatel@chartis.com -Acce
 # Set Registry via Powershell
 new-item -path HKLM:\software\motive\m-files\10.2.3920.54\client\mfofficeaddin -name outlookaddindisabled - value 0 -force
 
-
+# List installed apps in a table
+Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher, InstallDate | 
+Format-Table –AutoSize
 
