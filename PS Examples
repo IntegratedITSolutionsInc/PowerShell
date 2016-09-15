@@ -11,6 +11,12 @@
  Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher, InstallDate | 
  Format-Table –AutoSize
  
+ # Get current “main” version of IE
+$IEVersionString = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("c:\Program Files\Internet Explorer\iexplore.exe").Fileversion
+$OutputString = "$Machine $QueryString IE-Version $IEVersionString"
+$sep="."
+$parts=$IEVersionString.split($sep)
 
-
-BLANK
+# Parts[0] is the answer:
+$parts[0]
+ 
