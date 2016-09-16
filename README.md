@@ -6,6 +6,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Check-EsetAgent|Antonio Vincentelli|
 |Check-EsetEndpoint|Antonio Vincentelli|
 |Check-EsetFS|Antonio Vincentelli|
+|Check-InstalledAv|Antonio Vincentelli|
 |Check-MachineRole|Antonio Vincentelli|
 |Check-PSVersion|Antonio Vincentelli|
 |Create-Zip|Darren Khan|

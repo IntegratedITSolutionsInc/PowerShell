@@ -2331,3 +2331,58 @@ function Check-MachineRole
         
     }
 }
+
+<#
+.Synopsis
+   Checks if known antivirus programs are currently installed on host machine. Returns any found and their uninstall string, else "none found".
+.DESCRIPTION
+   Checks for the existence of various known AVs in host machine's Add/Remove. If it detects any, returns a table of products and related uninstall strings. Otherwise, it returns "none found".
+.EXAMPLE
+   Computer with no AV:
+   Check-InstalledAV
+
+   none found
+.EXAMPLE
+   Computer with AVG:
+   Check-InstalledAV
+
+   AVG
+.EXAMPLE
+   Computer with AVG *and* ESET:
+   Check-InstalledAv
+
+   AVG
+   ESET
+#>
+function Check-InstalledAv
+{
+    [CmdletBinding()]
+    [Alias("Check-AV")]
+    [OutputType([string])]
+    Param
+    ()
+
+    Begin
+    {
+        # Initialize the $avs container.
+        $avs = $null
+
+        # List of known AV products.
+        $KnownAV = @("AVG","ESET","Kaspersky","Norton","Symantec")
+    }
+
+    Process
+    {
+        foreach($item in $KnownAV)
+        {
+            $avs += Get-InstalledPrograms | where{($_.display_name -match $item)}
+        }
+
+    }
+
+    End
+    {
+        if($avs){echo $avs}
+        else{echo "none found"}
+    }
+}
