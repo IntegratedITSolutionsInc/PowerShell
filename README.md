@@ -15,6 +15,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Get-CrashPlanLogs|Darren Khan|
 |Get-DriveChanges|Darren Khan|
 |Get-DriveStatistics|Darren Khan|
+|Get-ErrorEventLogs|Arjun Gheek|
 |Get-EsetLink|Antonio Vincentelli|
 |Get-InstalledPrograms|Darren Khan|
 |Get-iitstaskpswd|Arjun Gheek|
