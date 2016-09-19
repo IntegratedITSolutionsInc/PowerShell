@@ -1,7 +1,7 @@
 ﻿<#
 .Synopsis
    This function will find the Kaseya Machine ID of the computer.  It will find the computer name if there is no kaseya agent installed.
-.DESCRIPTION
+.DESCRIPTION.
    This function checks the registry for the Kaseya Machine ID.  It can be used in other scripts to find the name.
 .EXAMPLE
   Get-KaseyaMachineID
@@ -42,16 +42,19 @@ function Email-MSalarm
     Param
     (
         # Body of the e-mail to be sent out.
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true, Position=0)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         $Body,
 
         # Any attachments (separated by commas, no space; enclose each filepath in quotes if necessary, but *not* the whole list of paths).
-        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
         $Attachment,
 
         # Optional switch to create a log file at completion of the function.
-        [Parameter(Mandatory=$false, Position=2)]
-        [Switch]$Logging
+        [Parameter(Mandatory=$false)]
+        [Switch]$Logging,
+        
+        [Parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true)]
+        $Subject
     )
 
     Begin
@@ -126,13 +129,13 @@ function Email-MSalarm
                 }
                 
                 # Send the e-mail, with the verified list of attachments.
-                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script with attachment." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -Attachments $AttachCleanList -ErrorAction Stop -ErrorVariable CurrentError}
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject $(if(!$Subject){"[$(Get-KaseyaMachineID)] - Emailed from Powershell Script."}else{$Subject}) -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -Port 587 -From forecast@integratedit.com -Attachments $AttachCleanList -ErrorAction Stop -ErrorVariable CurrentError}
                 Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
             }
             Else
             {
                 # Send the e-mail, no attachments.
-                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject "[$(Get-KaseyaMachineID)] - Emailed from Powershell Script." -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError}
+                Try{Send-MailMessage -To MSalarm@integratedit.com -Subject $(if(!$Subject){"[$(Get-KaseyaMachineID)] - Emailed from Powershell Script."}else{$Subject}) -body "{Script}`n`n$Body" -Credential $credentials -SmtpServer outlook.office365.com -UseSsl -Port 587 -From forecast@integratedit.com -ErrorAction Stop -ErrorVariable CurrentError}
                 Catch{$logs += "$(Get-Date) - Couldn't email. Error: $CurrentError"}
             }
         }
@@ -2024,6 +2027,7 @@ function get-iitstaskpswd {
         $output = "$unsecpswd is the password for the account"
         return $unsecpswd
 }
+
 <#
 .Synopsis - The function collects the System and Application Error logs for the last one month. If the error has occured more than 10 times, it sends an e-mail to ms-alarm
 .Description - The function gets the system and application Error logs that have happened in the last one month, It then finds which errors occured more than 10 times. For the source of that event
@@ -2060,5 +2064,23 @@ it then collects the newest 10 logs and sends an e-mail to MS alarm
                     }
         
   }
+
+Function Lock-User-Computer
+{
+<#
+.DESCRIPTION
+	Function to Lock a user's computer remotely
+.SYNOPSIS
+	Function to Lock a computer...if already locked this will do nothing
+#>
+	
+$signature = @"
+[DllImport("user32.dll", SetLastError = true)]
+public static extern bool LockWorkStation();
+"@
+
+$LockComputer = Add-Type -memberDefinition $signature -name "Win32LockWorkStation" -namespace Win32Functions -passthru
+$LockComputer::LockWorkStation() | Out-Null
+}
 
  
