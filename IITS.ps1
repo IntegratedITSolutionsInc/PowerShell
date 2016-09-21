@@ -1938,8 +1938,18 @@ function Install-Eset
             $kill++
         }
 
-        # Don't bother processing *anything* if installed PowerShell isn't compatible.
-        else
+        $logs += "$(Get-Date) - Checking local Add/Remove for any known security products."
+        $avs = Check-InstalledAv
+
+        # If any security products were found, return that instead of continuing.
+        if($avs -ne "none found")
+        {
+            $logs += "$(Get-Date) - Existing antivirus detected:`n$avs"
+            $kill++
+        }
+
+        # Don't bother processing *anything* if there are snags.
+        if($kill -eq 0)
         {
             $logs += "$(Get-Date) - Checking if the ESET Agent is already installed."
             if(!(Check-EsetAgent))
