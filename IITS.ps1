@@ -2336,11 +2336,16 @@ function Check-MachineRole
 
     Begin
     {
-        
+        # List of known workstation OSes
+        $wks = @("Windows 10")
+
+        # List of known server OSes
+        $srv = @()
     }
     Process
     {
-        
+        $os = (gwmi -Class Win32_OperatingSystem).Caption
+
     }
     End
     {
