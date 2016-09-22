@@ -1944,9 +1944,15 @@ function Install-Eset
         # If any security products were found, return that instead of continuing.
         if($avs -ne "none found")
         {
-            $logs += "$(Get-Date) - Existing antivirus detected:`n$avs"
+            # Convert the list-of-avs object to an array of strings
+            [string]$avlist = @()
+            foreach($item in $avs){$avlist += "Name: $($item.Display_Name); Uninstall Path: $($item.Uninstall_Path)`n"}
+
+            $logs += "$(Get-Date) - Existing antivirus detected:`n$avlist"
             $kill++
         }
+        # Otherwise, just add the fact that none were found to the previous log.
+        else{$logs[-1] += " None found."}
 
         # Don't bother processing *anything* if there are snags.
         if($kill -eq 0)
