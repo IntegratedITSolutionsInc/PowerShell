@@ -2027,7 +2027,7 @@ function Install-Eset
                         $kill++
                     }
                 }
-                else
+                elseif(Check-MachineRole -eq "workstation")
                 {
                     # Variable to be used for ticket creation (see End block)
                     $role = "wks"
@@ -2044,6 +2044,11 @@ function Install-Eset
                         $kill++
                     }
                 }
+                else
+                {
+                    $logs += "$(Get-Date) - Installed OS determined to not be Windows; cancelling procedure."
+                    $kill++
+                }
             }
             else
             {
@@ -2051,6 +2056,8 @@ function Install-Eset
                 $kill++
             }
         }
+
+        $logs += "$(Get-Date) - Total killswitch triggers: $kill"
     }
 
     End
@@ -2334,22 +2341,17 @@ function Check-MachineRole
     Param
     ()
 
-    Begin
-    {
-        # List of known workstation OSes
-        $wks = @("Windows 10")
-
-        # List of known server OSes
-        $srv = @()
-    }
     Process
     {
+        # Get the OS proper name.
         $os = (gwmi -Class Win32_OperatingSystem).Caption
 
-    }
-    End
-    {
-        
+        if($os -match "Windows")
+        {
+            if($os -match "Server"){echo "server"}
+            else{echo "workstation"}
+        }
+        else{echo "cannot determine"}
     }
 }
 
@@ -2386,7 +2388,7 @@ function Check-InstalledAv
     Begin
     {
         # Initialize the $avs container.
-        $avs = $null
+        [string]$avs = $null
 
         # List of known AV products.
         $KnownAV = @("AVG","ESET","Kaspersky","Norton","Symantec")
@@ -2394,6 +2396,7 @@ function Check-InstalledAv
 
     Process
     {
+        # Go through the local machine's Add/Remove list and check for anything with they keywords given in $KnownAVs. Add any found to $avs.
         foreach($item in $KnownAV)
         {
             $avs += Get-InstalledPrograms | where{($_.display_name -match $item)}
