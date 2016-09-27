@@ -2083,4 +2083,123 @@ $LockComputer = Add-Type -memberDefinition $signature -name "Win32LockWorkStatio
 $LockComputer::LockWorkStation() | Out-Null
 }
 
+<#
+.Synopsis
+   This function will gather a list of .exes on the machine and then report if something is added or removed. 
+.DESCRIPTION
+   Long description
+.EXAMPLE
+   Example of how to use this cmdlet
+.EXAMPLE
+   Another example of how to use this cmdlet
+#>
+function Compare-Executables
+{
+    [CmdletBinding()]
+    Param
+    (
+        [switch]$ErrorLog
+    )
+
+    Begin
+    {
+        $booboos = @()
+        $booboos += "$(Get-Date) - Finding drives on the machine."
+        $volumes = $(Get-DriveStatistics).Drive
+        $booboos += "$(Get-Date) - Found $($volumes.count) to check, $volumes."
+        if((!(Test-Path -Path C:\IITS_Scripts\Programs\)) -and (!(test-path -Path $env:windir\Temp\CompareExecutables_IITS.txt)))
+        {
+            $booboos += "$(Get-Date) - Creating Directory for CSV file."
+            New-Item -ItemType Directory C:\IITS_Scripts\Programs
+            $booboos += "$(Get-Date) - Created directory for CSV file."
+            $booboos += "$(Get-Date) - Creating log file."
+            New-Item -ItemType File $env:windir\Temp\CompareExecutables_IITS.txt
+            $booboos += "$(Get-Date) - Created log file."
+        }
+        elseif(!(Test-Path -Path C:\IITS_Scripts\Programs -Filter *.csv) -and (Test-Path -Path $env:windir\Temp\CompareExecutables_IITS.txt))
+        {
+            If(Get-Content -Path $env:windir\Temp\CompareExecutables_IITS.txt | Where-Object {($_ -match "")})
+            {
+                $Tamper = $true
+                Email-MSalarm -Body "Someone has Tampered with the known list of applications!  Inspect this machine for any malicious behavior immediately!"
+            }
+            else
+            {
+                $Tamper = $false
+            }
+        }
+    }
+    Process
+    {
+        if($Tamper -ne $true)
+        { 
+            foreach($volume in $volumes)
+            {
+                $new_exes += Get-ChildItem -Path $volume -Filter *.exe | Select-Object -Property Name, FullName
+            }
+            $old_exes = Get-ChildItem -Path C:\IITS_Scripts\Programs -filter *.csv | Sort-Object -Property CreationTime -Descending | Select-Object -Property CreationTime, Fullname -First 1
+            $old_exes = $old_exes.fullname | Import-Csv
+            foreach($new_exe in $new_exes)
+            {
+                $match = $old_exes | Where-Object {($_.fullname -eq $new_exe.fullname)}
+                if(!$match)
+                {
+                    $booboos += "$(Get-Date) - Found a program that does not exist in the old list. This must be a new program. $($new_exe.fullname)."
+                    $Added_Program += $new_exe
+                }
+                else
+                {
+                    $booboos += "$(Get-Date) - Found a matching program in the old list."
+                }
+            }
+            Foreach($old_exe in $old_exes)
+            {
+                $match = $new_exes | Where-Object {($_.fullname -eq $old_exe.fullname)}
+                if(!$match)
+                {
+                    $booboos += "$(Get-Date) - Found a program that does not exist in the new list. This must be a removed program. $($old_exe.fullname)."
+                    $Removed_Program += $old_exe
+                }
+                else
+                {
+                    $booboos += "$(Get-Date) - Found a matching program in the new list."
+                }
+            }
+            $new_exes | Export-Csv -Path C:\IITS_Scripts\Programs\$(Get-date -Format yyyyMdHms)_programs.csv -Force
+            if($Added_Program -and $Removed_Program)
+            {
+                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added and Removed .exe found on machine" -Body "Added: 
+                $Added_Program
+                Removed: 
+                $Removed_Program"
+            }
+            elseif($Added_Program -and !$Removed_Program)
+            {
+                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added .exe found on machine" -Body "Added: 
+                $Added_Program"
+            }
+            Elseif(!$Added_Program -and $Removed_Program)
+            {
+                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Removed .exe found on machine" -Body "Removed: 
+                $Removed_Program"
+            }
+            Else
+            {
+                $booboos += "$(Get-Date) - No new or removed programs."
+            }
+        }
+    }
+    End
+    {
+        if($ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\CompareExecutables_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
+
  
