@@ -1889,6 +1889,7 @@ Integrated IT Solutions
 ITHelp@intgratedit.com"
 
             Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Managed.Services@integratedit.com -Bcc $emails -Subject $Subject -Body $Body -Credential $Credentials
+            $booboos += "$(Get-Date) - Sent email to: $emails."
         }
         elseif((Test-Path -Path 'C:\Dropbox (Managed Services)\Managed Services Team Folder\PatchingEmails\MarketingManagerSearch.csv') -eq $false)
         {
@@ -1907,14 +1908,16 @@ Darren"
         }
         if($email_eng -eq $true)
         {
+            $booboos += "$(Get-Date) - Sending emails to engineers."
             $Subject_eng = "IMPORTANT!!!!  IITS CLIENT PATCHING IS HAPPENING TONIGHT!!!"
-            $Body_eng = "Hi All,
-$Phrase $($patchTuesday | get-date -format D) is the IITS client patching day.  THe vast majority of servers will be patched tonight starting at 9pm.  Reboots will happen after patching.  Please check Kaseya's Patch Management module if you have any questions pertaining to a specific client.
+            $Body_eng = "Hi Everyone,
+$Phrase $($patchTuesday | get-date -format D) is the IITS client patching day.  The vast majority of servers will be patched tonight starting at 9pm.  Reboots will happen after patching.  Please check Kaseya's Patch Management module if you have any questions pertaining to a specific client.
             
 Thanks,
             
 Managed Services Team"
             Send-MailMessage -SmtpServer 10.12.0.85 -from Managed.Services@integratedit.com -to Engineers@integratedit.com -Subject $Subject_eng -Body $Body_eng -Credential $Credentials
+            $booboos += "$(Get-Date) - Sent email to engineers."
         }
     }
     End
@@ -2087,38 +2090,38 @@ $LockComputer::LockWorkStation() | Out-Null
 .Synopsis
    This function will gather a list of .exes on the machine and then report if something is added or removed. 
 .DESCRIPTION
-   Long description
+   This function checks for programs against a csv file.
 .EXAMPLE
-   Example of how to use this cmdlet
-.EXAMPLE
-   Another example of how to use this cmdlet
+   Compare-Executables
 #>
 function Compare-Executables
 {
     [CmdletBinding()]
     Param
     (
-        [switch]$ErrorLog
     )
 
     Begin
     {
+        $ErrorLog = $false
         $booboos = @()
+        $Added_Program = @()
+        $Removed_Program = @()
         $booboos += "$(Get-Date) - Finding drives on the machine."
         $volumes = $(Get-DriveStatistics).Drive
         $booboos += "$(Get-Date) - Found $($volumes.count) to check, $volumes."
         if((!(Test-Path -Path C:\IITS_Scripts\Programs\)) -and (!(test-path -Path $env:windir\Temp\CompareExecutables_IITS.txt)))
         {
-            $booboos += "$(Get-Date) - Creating Directory for CSV file."
-            New-Item -ItemType Directory C:\IITS_Scripts\Programs
-            $booboos += "$(Get-Date) - Created directory for CSV file."
-            $booboos += "$(Get-Date) - Creating log file."
-            New-Item -ItemType File $env:windir\Temp\CompareExecutables_IITS.txt
-            $booboos += "$(Get-Date) - Created log file."
+            $booboos += "$(Get-Date) - Creating hidden directory for CSV file."
+            $(New-Item -ItemType Directory C:\IITS_Scripts\Programs).Attributes = "Hidden"
+            $booboos += "$(Get-Date) - Created hidden directory for CSV file."
+            $booboos += "$(Get-Date) - Creating hidden log file."
+            $(New-Item -ItemType File $env:windir\Temp\CompareExecutables_IITS.txt).Attributes = "Hidden"
+            $booboos += "$(Get-Date) - Created hidden log file."
         }
-        elseif(!(Test-Path -Path C:\IITS_Scripts\Programs -Filter *.csv) -and (Test-Path -Path $env:windir\Temp\CompareExecutables_IITS.txt))
+        elseif(!(Get-ChildItem -Path C:\IITS_Scripts\Programs\ -Filter *.csv -Force) -and (Test-Path -Path $env:windir\Temp\CompareExecutables_IITS.txt))
         {
-            If(Get-Content -Path $env:windir\Temp\CompareExecutables_IITS.txt | Where-Object {($_ -match "")})
+            If(Get-Content -Path $env:windir\Temp\CompareExecutables_IITS.txt | Where-Object {($_ -match " - Created CSV file.")})
             {
                 $Tamper = $true
                 Email-MSalarm -Body "Someone has Tampered with the known list of applications!  Inspect this machine for any malicious behavior immediately!"
@@ -2135,63 +2138,95 @@ function Compare-Executables
         { 
             foreach($volume in $volumes)
             {
-                $new_exes += Get-ChildItem -Path $volume -Filter *.exe | Select-Object -Property Name, FullName
+                $new_exes += Get-ChildItem -Path $volume -Filter *.exe -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -Property Name, FullName
             }
-            $old_exes = Get-ChildItem -Path C:\IITS_Scripts\Programs -filter *.csv | Sort-Object -Property CreationTime -Descending | Select-Object -Property CreationTime, Fullname -First 1
-            $old_exes = $old_exes.fullname | Import-Csv
-            foreach($new_exe in $new_exes)
+            if(Get-ChildItem -Path C:\IITS_Scripts\Programs\ -Filter *.csv -Force)
             {
-                $match = $old_exes | Where-Object {($_.fullname -eq $new_exe.fullname)}
-                if(!$match)
+                $old_exes = Get-ChildItem -Path C:\IITS_Scripts\Programs -filter *.csv -Force | Sort-Object -Property CreationTime -Descending | Select-Object -Property CreationTime, Fullname -First 1
+                $old_exes = $old_exes.fullname | Import-Csv
+                foreach($new_exe in $new_exes)
                 {
-                    $booboos += "$(Get-Date) - Found a program that does not exist in the old list. This must be a new program. $($new_exe.fullname)."
-                    $Added_Program += $new_exe
+                    $match = $old_exes | Where-Object {($_.fullname -eq $new_exe.fullname)}
+                    if(!$match)
+                    {
+                        $booboos += "$(Get-Date) - Found a program that does not exist in the old list. This must be a new program. $($new_exe.fullname)."
+                        $Added_Program += $new_exe
+                    }
+                    else
+                    {
+                        $booboos += "$(Get-Date) - Found a matching program in the old list. $($match.fullname)"
+                    }
                 }
-                else
+                Foreach($old_exe in $old_exes)
                 {
-                    $booboos += "$(Get-Date) - Found a matching program in the old list."
+                    $match = $new_exes | Where-Object {($_.fullname -eq $old_exe.fullname)}
+                    if(!$match)
+                    {
+                        $booboos += "$(Get-Date) - Found a program that does not exist in the new list. This must be a removed program. $($old_exe.fullname)."
+                        $Removed_Program += $old_exe
+                    }
+                    else
+                    {
+                        $booboos += "$(Get-Date) - Found a matching program in the new list. $($match.fullname)"
+                    }
                 }
-            }
-            Foreach($old_exe in $old_exes)
-            {
-                $match = $new_exes | Where-Object {($_.fullname -eq $old_exe.fullname)}
-                if(!$match)
+                if($Added_Program -and $Removed_Program)
                 {
-                    $booboos += "$(Get-Date) - Found a program that does not exist in the new list. This must be a removed program. $($old_exe.fullname)."
-                    $Removed_Program += $old_exe
+                    $booboos += "$(Get-Date) - Emailing that a program has been added and removed from the machine."
+                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added and Removed .exe found on machine" -Body "Added: 
+                    $($Added_Program.fullname)
+                    Removed: 
+                    $($Removed_Program.fullname)"
+                    $booboos += "$(Get-Date) - Email has been sent."
                 }
-                else
+                elseif($Added_Program -and !$Removed_Program)
                 {
-                    $booboos += "$(Get-Date) - Found a matching program in the new list."
+                    $booboos += "$(Get-Date) - Emailing that a program has been added."
+                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added .exe found on machine" -Body "Added: 
+                    $($Added_Program.fullname)"
+                    $booboos += "$(Get-Date) - Email has been sent."
+                }
+                Elseif(!$Added_Program -and $Removed_Program)
+                {
+                    $booboos += "$(Get-Date) - Sending email that program has been removed."
+                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Removed .exe found on machine" -Body "Removed: 
+                    $($Removed_Program.fullname)"
+                    $booboos += "$(Get-Date) - Email has been sent."
+                }
+                Else
+                {
+                    $booboos += "$(Get-Date) - No new or removed programs."
                 }
             }
-            $new_exes | Export-Csv -Path C:\IITS_Scripts\Programs\$(Get-date -Format yyyyMdHms)_programs.csv -Force
-            if($Added_Program -and $Removed_Program)
+            else
             {
-                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added and Removed .exe found on machine" -Body "Added: 
-                $Added_Program
-                Removed: 
-                $Removed_Program"
+                $booboos += "$(Get-Date) - No CSV files exist in Programs directory.  Assuming this is the first run of the program."
             }
-            elseif($Added_Program -and !$Removed_Program)
-            {
-                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added .exe found on machine" -Body "Added: 
-                $Added_Program"
-            }
-            Elseif(!$Added_Program -and $Removed_Program)
-            {
-                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Removed .exe found on machine" -Body "Removed: 
-                $Removed_Program"
-            }
-            Else
-            {
-                $booboos += "$(Get-Date) - No new or removed programs."
-            }
+            $booboos += "$(Get-Date) - Creating CSV file."
+            $new_exes | Export-Csv -Path "C:\IITS_Scripts\Programs\$(Get-date -Format yyyyMdHms)_programs.csv" -Force
+            $booboos += "$(Get-Date) - Created CSV file."
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - CSV safe file has been tampered with or deleted."
+            Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Something has caused the CSV files to be deleted!" -Body "Please look into this machine and find out why the folder for CSV file doesn't exist."
+            $booboos += "$(Get-Date) - Email has been sent."
+        }
+        $booboos += "$(Get-Date) - Finding 10 files to keep."
+        $keep = Get-ChildItem -Path C:\IITS_Scripts\Programs -Filter *.csv -Force | Sort-Object -Property CreationTime -Descending | Select-Object -First 10
+        $booboos += "$(Get-Date) - Processing all files that do not match the ones to keep."
+        foreach($file in $keep)
+        {
+            $file.attributes = "Hidden","ReadOnly"
+            $remove = Get-ChildItem -Path C:\IITS_Scripts\Programs -Filter *.csv -Force | Where-Object {($_.fullname -ne $file.fullname)}
+            $booboos += "$(Get-Date) - Removing old CSV file. $($remove.fullname)"
+            $remove | Remove-Item -Force | Out-Null
+            $booboos += "$(Get-Date) - Removed old CSV file. $($remove.FullName)"
         }
     }
     End
     {
-        if($ErrorLog)
+        if(!$ErrorLog)
         {
             $LogPath = "$env:windir\Temp\CompareExecutables_IITS.txt"
             foreach($booboo in $booboos)
