@@ -4,6 +4,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |---|---|
 |Add-ivantage-user|Michael Surtees
 |Check-PSVersion|Antonio Vincentelli|
+|Compare-Executables| Darren Khan|
 |Create-Zip|Darren Khan|
 |Create-LocalAdministrator|Arjun Gheek|
 |Disable-365-Account|Michael Surtees|
