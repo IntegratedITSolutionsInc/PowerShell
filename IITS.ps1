@@ -2125,6 +2125,7 @@ function Compare-Executables
             {
                 $Tamper = $true
                 Email-MSalarm -Body "Someone has Tampered with the known list of applications!  Inspect this machine for any malicious behavior immediately!"
+                $booboos += "$(Get-Date) - Sent email that the IITS_Scripts\Programs folder or csv files has been tampered with outside of this function."
             }
             else
             {
@@ -2144,53 +2145,47 @@ function Compare-Executables
             {
                 $old_exes = Get-ChildItem -Path C:\IITS_Scripts\Programs -filter *.csv -Force | Sort-Object -Property CreationTime -Descending | Select-Object -Property CreationTime, Fullname -First 1
                 $old_exes = $old_exes.fullname | Import-Csv
-                foreach($new_exe in $new_exes)
+                $booboos += "$(Get-Date) - Finding differences."
+                $differences = Compare-Object -ReferenceObject $old_exes.fullname -DifferenceObject $new_exes.fullname
+                If($differences)
                 {
-                    $match = $old_exes | Where-Object {($_.fullname -eq $new_exe.fullname)}
-                    if(!$match)
-                    {
-                        $booboos += "$(Get-Date) - Found a program that does not exist in the old list. This must be a new program. $($new_exe.fullname)."
-                        $Added_Program += $new_exe
-                    }
-                    else
-                    {
-                        $booboos += "$(Get-Date) - Found a matching program in the old list. $($match.fullname)"
-                    }
+                    $booboos += "$(Get-Date) - Spiltting differences into added or removed programs."
                 }
-                Foreach($old_exe in $old_exes)
+                else
                 {
-                    $match = $new_exes | Where-Object {($_.fullname -eq $old_exe.fullname)}
-                    if(!$match)
-                    {
-                        $booboos += "$(Get-Date) - Found a program that does not exist in the new list. This must be a removed program. $($old_exe.fullname)."
-                        $Removed_Program += $old_exe
-                    }
-                    else
-                    {
-                        $booboos += "$(Get-Date) - Found a matching program in the new list. $($match.fullname)"
-                    }
+                    $booboos += "$(Get-Date) - No differences found."
+                }
+                $Removed_Program = $differences | where-object {($_.sideindicator -match "<=")} | Select-Object -Property InputObject
+                if($Removed_Program)
+                {
+                    $booboos += "$(Get-Date) - Found programs that don't exist in the new list. $($Removed_Program.fullname)"
+                }
+                $Added_Program = $differences | Where-Object {($_.sideindicator -match "=>")} | Select-Object -Property InputObject
+                if($Added_Program)
+                {
+                    $booboos += "$(Get-Date) - Found programs that don't exist in the old list. $($Added_Program.fullname)"
                 }
                 if($Added_Program -and $Removed_Program)
                 {
                     $booboos += "$(Get-Date) - Emailing that a program has been added and removed from the machine."
-                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added and Removed .exe found on machine" -Body "Added: 
-                    $($Added_Program.fullname)
+                    Email-MSalarm -Logging -Subject "[$(Get-KaseyaMachineID)] - Added and Removed .exe found on machine" -Body "Added: 
+                    $($Added_Program.InputObject)
                     Removed: 
-                    $($Removed_Program.fullname)"
+                    $($Removed_Program.InputObject)"
                     $booboos += "$(Get-Date) - Email has been sent."
                 }
                 elseif($Added_Program -and !$Removed_Program)
                 {
                     $booboos += "$(Get-Date) - Emailing that a program has been added."
-                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Added .exe found on machine" -Body "Added: 
-                    $($Added_Program.fullname)"
+                    Email-MSalarm -Logging -Subject "[$(Get-KaseyaMachineID)] - Added .exe found on machine" -Body "Added: 
+                    $($Added_Program.InputObject)"
                     $booboos += "$(Get-Date) - Email has been sent."
                 }
                 Elseif(!$Added_Program -and $Removed_Program)
                 {
                     $booboos += "$(Get-Date) - Sending email that program has been removed."
-                    Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Removed .exe found on machine" -Body "Removed: 
-                    $($Removed_Program.fullname)"
+                    Email-MSalarm -Logging -Subject "[$(Get-KaseyaMachineID)] - Removed .exe found on machine" -Body "Removed: 
+                    $($Removed_Program.InputObject)"
                     $booboos += "$(Get-Date) - Email has been sent."
                 }
                 Else
@@ -2214,14 +2209,17 @@ function Compare-Executables
         }
         $booboos += "$(Get-Date) - Finding 10 files to keep."
         $keep = Get-ChildItem -Path C:\IITS_Scripts\Programs -Filter *.csv -Force | Sort-Object -Property CreationTime -Descending | Select-Object -First 10
-        $booboos += "$(Get-Date) - Processing all files that do not match the ones to keep."
-        foreach($file in $keep)
+        Foreach($file in $keep)
         {
             $file.attributes = "Hidden","ReadOnly"
-            $remove = Get-ChildItem -Path C:\IITS_Scripts\Programs -Filter *.csv -Force | Where-Object {($_.fullname -ne $file.fullname)}
-            $booboos += "$(Get-Date) - Removing old CSV file. $($remove.fullname)"
-            $remove | Remove-Item -Force | Out-Null
-            $booboos += "$(Get-Date) - Removed old CSV file. $($remove.FullName)"
+            $booboos += "$(Get-Date) - Setting file, $($file.fullname), to Hidden and Read Only."
+        }
+        $booboos += "$(Get-Date) - Processing all files that do not match the ones to keep."
+        $remove_csv = Compare-Object -ReferenceObject $(Get-ChildItem -Path C:\IITS_Scripts\Programs -Filter *.csv -Force).FullName -DifferenceObject $keep.fullname | Where-Object {($_.sideindicator -match "<=")} | Select-Object -Property InputObject
+        foreach($csv in $remove_csv)
+        {
+            Remove-Item $csv.inputobject -Force
+            $booboos += "$(Get-Date) - Removed file $($csv.inputobject)."
         }
     }
     End
