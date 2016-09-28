@@ -30,8 +30,5 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Remove-Outlook-Automap|Michael Surtees|
 |Send-PatchEmail|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
-|Create-USPGtaskrebootpopup|
+|Create-USPGtaskrebootpopup|Arjun Gheek|
 |Lock-User-Computer|Michael Surtees|
-
-
-
