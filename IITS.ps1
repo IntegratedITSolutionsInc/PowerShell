@@ -545,8 +545,6 @@ function hide-user-from-GAL
    Get-EsetLink
 
    http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
-.INPUTS
-   Logging (switch)
 .OUTPUTS
    URL (string) or null
 .FUNCTIONALITY
@@ -554,20 +552,10 @@ function hide-user-from-GAL
 #>
 function Get-EsetLink
 {
-    [CmdletBinding(DefaultParameterSetName='Parameter Set 1', 
-                  SupportsShouldProcess=$true, 
-                  PositionalBinding=$false,
-                  HelpUri = 'http://www.microsoft.com/',
-                  ConfirmImpact='Medium')]
+    [CmdletBinding()]
     [OutputType([String])]
     Param
-    (
-        # Optional log switch. Outputs to $env:windir\Temp\GetEsetLink_IITS.txt
-        [Parameter(Mandatory=$false,
-                   ValueFromPipeline=$false)]
-        [Alias("log","errorlog","error")]
-        [Switch]$Logging
-    )
+    ()
     
     Begin
     {
@@ -634,14 +622,8 @@ function Get-EsetLink
         if($kill -eq 0)
         {
             # Import the key and search for the group and OS architecture. Save the result to a container.
-            Try
-            {
-                $orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)
-            }
-            Catch
-            {
-                $logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"
-            }
+            Try{$orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)}
+            Catch{$logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"}
         }
         else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
         
@@ -651,13 +633,9 @@ function Get-EsetLink
 
     End
     {
-        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
-        if($Logging)
-        {
-            $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
-            foreach($log in $logs)
-            {"$log" | Out-File -FilePath $LogPath -Force -Append}
-        }
+        # Update (or create) the log file for this function with the contents of the $logs array.
+        $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
+        foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
 
@@ -1898,9 +1876,6 @@ function Install-Eset
     [Alias("Get-Eset")]
     Param
     (
-        # Optional switch to enable exporting of log file at completion of function.
-        [Switch]$logging,
-
         # Optional switch to enable creating a ticket if any problems occur.
         [Switch]$ticket
     )
@@ -1964,12 +1939,7 @@ function Install-Eset
                 if(!(Test-Path $agentPath))
                 {
                     $logs += "$(Get-Date) - Fetching the ESET Agent download link."
-                    try
-                    {
-                        # If logging was called for this function, also call logging on sub-functions that have the option.
-                        if($logging){$link = Get-EsetLink -Logging}
-                        else{$link = Get-EsetLink}
-                    }
+                    try{$link = Get-EsetLink}
                     catch
                     {
                         $logs += "$(Get-Date) - There was an unexpected error when fetching the ESET Agent download link: $($error[0])"
@@ -1993,8 +1963,7 @@ function Install-Eset
                 try
                 {
                     # If logging was called for this function, also call logging on sub-functions that have the option.
-                    if($logging){Install-EsetAgent -logging}
-                    else{Install-EsetAgent}
+                    Install-EsetAgent
                 }
                 catch
                 {
@@ -2015,12 +1984,7 @@ function Install-Eset
                     $role = "srv"
 
                     $logs += "$(Get-Date) - Installing ESET File Security."
-                    try
-                    {
-                        # If logging was called for this function, also call logging on sub-functions that have the option.
-                        if($logging){Install-EsetFS -logging}
-                        else{Install-EsetFS}
-                    }
+                    try{Install-EsetFS}
                     catch
                     {
                         $logs += "$(Get-Date) - There was a problem installing ESET File Security: $($error[0])"
@@ -2033,12 +1997,7 @@ function Install-Eset
                     $role = "wks"
                     
                     $logs += "$(Get-Date) - Installing ESET Endpoint."
-                    try
-                    {
-                        # If logging was called for this function, also call logging on sub-functions that have the option.
-                        if($logging){Install-EsetEndpiont -logging}
-                        else{Install-EsetEndpiont}
-                    }
+                    try{Install-EsetEndpiont}
                     catch{
                         $logs += "$(Get-Date) - There was a problem installing ESET Endpoint: $($error[0])"
                         $kill++
@@ -2062,31 +2021,24 @@ function Install-Eset
 
     End
     {
-        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
-        if($logging)
-	    {
-		    $LogPath = "$env:windir\Temp\InstallEset_IITS.txt"
-    		foreach($log in $logs)
-    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
-	    }
-
+        # Update (or create) the log file for this function with the contents of the $logs array.
+        $LogPath = "$env:windir\Temp\InstallEset_IITS.txt"
+    	foreach($log in $logs)
+    	{"$log" | Out-File -FilePath $LogPath -Force -Append}
+	    
         # (Optional) Send an e-mail to MSAlarm to create a ticket.
         if(($ticket) -and ($kill -ne 0))
         {
-            if($logging)
+            # Find all ESET log files and add them to $logfiles.
+            [array]$logfiles = $null
+            [array]$files = Get-ChildItem $LogRoot | % Name
+            foreach($file in $files)
             {
-                # Use these log files if ESET was pushed on a server.
-                if($role -eq "srv"){$logfiles = $LogPath,"$LogRoot\InstallEsetAgent_IITS.txt","$LogRoot\InstallEsetFS_IITS.txt"}
-                # Use these log files if ESET was pusehd on a workstation.
-                elseif($role -eq "wks"){$logfiles = $LogPath,"$LogRoot\InstallEsetAgent_IITS.txt","$LogRoot\InstallEsetEndpoint_IITS.txt"}
-                # Use just this log file if ESET push aborted for any reason.
-                else{$logfiles = $LogPath}
-
-                # Sends an alert to MSAlarm, which will make a ticket. DOES include the log files as attachments.
-                Email-MSalarm -Body "ESET install failed on $(Get-KaseyaMachineID). See Documents for attached logs." -Attachment $logfiles
+                if($file -match "eset.*_IITS"){$logfiles += $file}
             }
-            # Sends an alert to MSAlarm, which will make a ticket. DOES NOT include the log files as attachments.
-            else{Email-MSalarm -Body "ESET install failed on $(Get-KaseyaMachineID)."}
+
+            # Sends an alert to MSAlarm, which will make a ticket. DOES include the log files as attachments.
+            Email-MSalarm -Body "ESET install failed on $(Get-KaseyaMachineID). See Documents for attached logs." -Attachment $logfiles
         }
     }
 }
@@ -2117,10 +2069,7 @@ function Check-EsetAgent
 function Install-EsetAgent
 {
     Param
-    (
-        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetAgent_IITS.txt".
-        [Switch]$logging
-    )
+    ()
 
     Begin
     {
@@ -2155,13 +2104,10 @@ function Install-EsetAgent
 
     End
     {
-        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
-    	if($logging)
-    	{
-    		$LogPath = "$env:windir\Temp\InstallEsetAgent_IITS.txt"
-    		foreach($log in $logs)
-    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
-    	}
+        # Update (or create) the log file for this function with the contents of the $logs array.
+    	$LogPath = "$env:windir\Temp\InstallEsetAgent_IITS.txt"
+    	foreach($log in $logs)
+    	{"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
 
@@ -2191,10 +2137,7 @@ function Check-EsetEndpoint
 function Install-EsetEndpoint
 {
     Param
-    (
-        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetEndpoint_IITS.txt".
-        [Switch]$logging
-    )
+    ()
 
     Begin
     {
@@ -2229,13 +2172,9 @@ function Install-EsetEndpoint
 
     End
     {
-        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
-    	if($logging)
-    	{
-    		$LogPath = "$env:windir\Temp\InstallEsetEndpoint_IITS.txt"
-    		foreach($log in $logs)
-    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
-    	}
+        $LogPath = "$env:windir\Temp\InstallEsetEndpoint_IITS.txt"
+    	foreach($log in $logs)
+    	{"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
 
@@ -2265,10 +2204,7 @@ function Check-EsetFS
 function Install-EsetFS
 {
     Param
-    (
-        # Switch to export a log file at the end of execution. Log file is generated at "$env:windir\Temp\InstallEsetFS_IITS.txt".
-        [Switch]$logging
-    )
+    ()
 
     Begin
     {
@@ -2277,13 +2213,27 @@ function Install-EsetFS
 
         # ESET File Security installer path.
         $FSPath = "C:\IITS_Mgmt\Temp\EsetFS.msi"
+
+        # Killswitch
+        $kill = 0
     }
     
     Process
     {
-        $logs += "$(Get-Date) - Verifying ESET File Security installer exists."
-        if(Test-Path $FSPath)
+        $logs += "$(Get-Date) - Checking for the installer."
+        if(!(Test-Path $FSPath))
         {
+            $logs += "$(Get-Date) - Downloading the installer."
+            try{Download-EsetFS}
+            catch
+            {
+                $logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"
+                $kill++
+            }
+        }
+        
+        if($kill -eq 0)
+        {    
             $logs += "$(Get-Date) - Attempting to install ESET File Security."
             try
             {
@@ -2297,19 +2247,14 @@ function Install-EsetFS
             }
             catch{$logs += "$(Get-Date) - Could not install ESET File Security. Error: $($error[0])"}
         }
-        else{$logs += "$(Get-Date) - Expected ESET File Security installer does not exist."}
         
     }
 
     End
     {
-        # (Optional) Update (or create) the log file for this function with the contents of the $logs array.
-    	if($logging)
-    	{
-    		$LogPath = "$env:windir\Temp\InstallEsetFS_IITS.txt"
-    		foreach($log in $logs)
-    		{"$log" | Out-File -FilePath $LogPath -Force -Append}
-    	}
+        $LogPath = "$env:windir\Temp\InstallEsetFS_IITS.txt"
+    	foreach($log in $logs)
+    	{"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
 
@@ -2408,5 +2353,69 @@ function Check-InstalledAv
     {
         if($avs){echo $avs}
         else{echo "none found"}
+    }
+}
+
+<#
+.Synopsis
+   Downloads the ESET File Security installer.
+.DESCRIPTION
+   Downloads a client-generic but OS-specific installer for ESET File Security. The downloaded file is always named EsetFS.msi.
+#>
+function Download-EsetFS
+{
+    [CmdletBinding()]
+    Param
+    ()
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # Declaring OS architecture container here so that I can check for (lack of) content later.
+        [Int]$OS = $null
+
+        # Download link for 32-bit File Security
+        $url32 = "http://www.dropbox.com/s/tvbbjr13k6fh5j6/file-security_32.msi?dl=1"
+        
+        # Download link for 32-bit File Security
+        $url64 = "http://www.dropbox.com/s/yr7e5r66hdjgduq/file-security_64.msi?dl=1"
+
+        # File name and path for downloaded installer
+        $out = "C:\IITS_Mgmt\Temp\EsetFS.msi"
+    }
+    
+    Process
+    {
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        Try
+        {
+            $logs += "$(Get-Date) - Fetching OS architecture."
+            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+            $OS=$matches[0]
+        }
+        Catch{$logs += "$(Get-Date) - Could not determine OS architecture."}
+
+        # 
+        if($OS)
+        {
+            if($OS -eq 32 -or 86)
+            {
+                wget -uri $url32 -outfile $out
+            }
+            elseif($OS -eq 64)
+            {
+                wget -uri $url64 -outfile $out
+            }
+            else{$logs += "$(Get-Date) - OS architecture misread. Given value: $OS"}
+        }
+    }
+    
+    End
+    {
+        # Update (or create) the log file for this function with the contents of the $logs array.
+    	$LogPath = "$env:windir\Temp\DownloadEsetFS_IITS.txt"
+    	foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }

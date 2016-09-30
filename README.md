@@ -12,6 +12,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Create-Zip|Darren Khan|
 |Disable-365-Account|Michael Surtees|
 |Deploy-GetDiskChanges|Darren Khan|
+|Download-EsetFS|Antonio Vincentelli|
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
 |Find-If-Domain-Blacklisted|Michael Surtees|
