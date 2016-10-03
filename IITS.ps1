@@ -2235,4 +2235,117 @@ function Compare-Executables
     }
 }
 
+ <#
+ .Synopsis
+    Function to find the activation status of a machine.
+ .DESCRIPTION
+    This function will find if the activation status of a machine is anything other than licensed. It can also accept an array of computer names
+ .EXAMPLE
+    Get-ActivationStatus
+ .Example
+    Get-ADComputer -filter * | Select-obect @{Name = 'ComputerNames';exp = {$_.name}} | Get-ActivationStatus
+ #>
+ function Get-ActivationStatus
+ {
+     [CmdletBinding()]
+     Param
+     (
+         # Param1 help description
+        [Parameter(Mandatory=$false,
+                    ValueFromPipeline = $true,
+                    ValueFromPipelineByPropertyName=$true,
+                    Position=0)]
+        [string[]]$ComputerNames,
+
+        [parameter(Mandatory=$false)]
+        $ErrorLog = $false
+     )
  
+     Begin
+     {
+        [array]$booboos = $null
+        if(!$ComputerNames)
+        {
+            $ComputerNames = $env:COMPUTERNAME
+        }
+     }
+     Process
+     {
+        $ActivationIssues = @()
+        $Outputs = @()
+        $booboos += "$(Get-Date) - Processing for list of computers."
+        foreach($computername in $computernames)
+        {
+            $booboos += "$(Get-Date) - Getting list of windows products."
+            try
+            {
+                $windows = Get-WmiObject -Class SoftwareLicensingProduct -ComputerName $ComputerName -ErrorAction SilentlyContinue | Where-Object {($_.Name -match "Windows") -and ($_.PartialProductKey -notlike '')}
+            }
+            catch
+            {
+                $booboos += "$(Get-Date) - Problem connection to machine $computername."
+            }
+            $booboos += "$(Get-Date) - Found Windows entry in WMI Class: $($windows.name) for $ComputerName."
+            switch ($windows.LicenseStatus)
+            {
+                "0"{$Status = "Unlicensed"; break} 
+                "1"{$Status = "Licensed"; break} 
+                "2"{$Status = "OOBGrace"; break} 
+                "3"{$Status = "OOTGrace"; break} 
+                "4"{$Status = "NonGenuine"; break} 
+                "5"{$Status = "Notification"; break} 
+                "6"{$Status = "ExtendedGrace"; break} 
+            }
+            $booboos += "$(Get-Date) - Found license status to be $Status."
+            $booboos += "$(Get-Date) - Building hash table."
+            $Prop = [ordered]@{
+                "ComputerName" = $ComputerName;
+                "ProductName" = $windows.name;
+                "ActivationStatus" = $Status;
+                }
+            $Outputs += New-Object -TypeName psobject -Property $Prop | Out-Null
+        }
+        $Outputs
+        foreach($Output in $Outputs)
+        {
+            if($Output.ActivationStatus -notmatch "Licensed")
+            {
+                $booboos += "$(Get-Date) - License status is not licensed for $($Output.ComputerName).  Adding to collection."
+                $ActivationIssues += $Output
+
+            }
+            else
+            {
+                $booboos += "$(Get-Date) - No license issue exists for $($Output.ComputerName)."
+            }
+        }
+        if($ActivationIssues)
+        {
+            try
+            {
+                $booboos += "$(Get-Date) - Sending email to msalarm."
+                Email-MSalarm -Subject "[$(Get-KaseyaMachineID)] - Found Windows activation issues!" -Body $ActivationIssues -Logging -ErrorAction Stop
+                $booboos += "$(Get-Date) - Sent email."
+            }
+            catch
+            {
+                $booboos += "$(Get-Date) - There was an issue sending the email to msalarm.  Check the log file for Email-MSalarm."
+            }
+        }
+        else
+        {
+            $booboos += "$(Get-Date) - No computers found with activation issues. No email will be sent."
+        }
+     }
+     End
+     {
+        if(!$ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\ActivationStatus_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+     }
+ }
