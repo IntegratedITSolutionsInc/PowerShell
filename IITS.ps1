@@ -2349,3 +2349,74 @@ function Compare-Executables
         }
      }
  }
+ <#
+.Synopsis
+   This funcation will run Network Detective scan and return the results of the machine.
+.DESCRIPTION
+   This function will run three network detective scans.  The network scan, security scan, and hipaa scan.  It will then zip up the results and send into msalarm.
+.EXAMPLE
+   Run-NetworkDetective
+#>
+function Run-NetWorkDetective
+{
+    [CmdletBinding()]
+    Param
+    (
+    )
+
+    Begin
+    {
+        $booboos = @()
+    }
+    Process
+    {
+        $booboos += "$(Get-Date) - Checking for output directory."
+        if(!(Test-Path -Path C:\IITS_Scripts\NetDetectResults\))
+        {
+            $booboos += "$(Get-Date) - Output directory does not exist.  Creating output directory."
+            New-Item -ItemType Directory -Path C:\IITS_Scripts\NetDetectResults\ -Force | Out-Null
+            $booboos += "$(Get-Date) - Created directory."
+        }
+        Else
+        {
+            $booboos += "$(Get-Date) - Directory already exists."
+        }
+        $booboos += "$(Get-Date) - Starting process to generate Network Security scan log files."
+        C:\IITS_Scripts\NetSecDetect\nddc.exe -local -silent -outdir "C:\IITS_Scripts\NetDetectResults"
+        $booboos += "$(Get-Date) - Finished processing network security file."
+        $booboos += "$(Get-Date) - Starting process to generate Security scan file."
+        C:\IITS_Scripts\NetSecDetect\sddc.exe -common -sdfdir "C:\IITS_Scripts\NetDetectResults"
+        $booboos += "$(Get-Date) - Finished generating security scan file."
+        $booboos += "$(Get-Date) - Starting process to generate HIPAA scan file."
+        C:\IITS_Scripts\HipaaDetect\hipaadc.exe -hipaadeep -outdir "C:\IITS_Scripts\NetDetectResults"
+        $booboos += "$(Get-Date) - Finished generating hipaa file."
+        $booboos += "$(Get-Date) - Zipping log file directory."
+        Create-Zip -Source "C:\IITS_Scripts\NetDetectResults" -Destination "C:\IITS_Scripts\NetDetectResults.zip"
+        $booboos += "$(Get-Date) - Sending email to msalarm with zip file attached."
+        Email-MSalarm -Attachment "C:\IITS_Scripts\NetDetectResults.zip" -Body "These are the results of a network detective scan, security scan, and hipaa scan." -Logging
+        $booboos += "$(Get-Date) - Sent email."
+        $booboos += "$(Get-Date) - Deleting Results zip file and result files."
+        Remove-Item -Path C:\IITS_Scripts\NetDetectResults.zip -Force
+        $booboos += "$(Get-Date) - Deleted Zip file."
+        $booboos += "$(Get-Date) - Getting file list in results directory."
+        $files = Get-ChildItem -Path C:\IITS_Scripts\NetDetectResults -Filter *.* -Recurse
+        $booboos += "$(Get-Date) - Found files $($files.fullname)."
+        foreach($file in $files)
+        {
+            $booboos += "$(Get-Date) - Removing file $($file.fullname)."
+            Remove-Item -Path $file.fullname -Force
+            $booboos += "$(Get-Date) - Removed file $($file.fullname)."
+        }        
+    }
+    End
+    {
+        if(!$ErrorLog)
+        {
+            $LogPath = "$env:windir\Temp\NetworkDetective_IITS.txt"
+            foreach($booboo in $booboos)
+            {
+                "$booboo" | Out-File -FilePath $LogPath -Force -Append
+            }
+        }
+    }
+}
