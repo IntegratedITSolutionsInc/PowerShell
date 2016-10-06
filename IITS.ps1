@@ -2130,6 +2130,74 @@ function Check-EsetEndpoint
 
 <#
 .Synopsis
+   Downloads the ESET Endpoint installer.
+.DESCRIPTION
+   Downloads a client-generic but OS-specific installer for ESET Endpoint. The downloaded file is always named EsetEndpoint.msi.
+#>
+function Download-EsetEndpoint
+{
+    [CmdletBinding()]
+    Param
+    ()
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # Declaring OS architecture container here so that I can check for (lack of) content later.
+        [Int]$OS = $null
+
+        # Download link for 32-bit Endpoint
+        $url32 = "http://www.dropbox.com/s/69lmk8ug7bnagyv/endpoint_32.msi?dl=1"
+        
+        # Download link for 32-bit Endpoint
+        $url64 = "http://www.dropbox.com/s/12av22ml3q5jxis/endpoint_64.msi?dl=1"
+
+        # File name and path for downloaded installer
+        $out = "C:\IITS_Mgmt\Temp\EsetEndpoint.msi"
+    }
+    
+    Process
+    {
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        Try
+        {
+            $logs += "$(Get-Date) - Fetching OS architecture."
+            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+            $OS=$matches[0]
+        }
+        Catch{$logs += "$(Get-Date) - Could not determine OS architecture."}
+
+        # Download the installer that matches the OS architecture.
+        if($OS)
+        {
+            $logs += "$(Get-Date) - Attempting to download installer that matches OS architecture."
+            
+            if($OS -eq 32 -or 86)
+            {
+                try{wget -uri $url32 -outfile $out}
+                catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
+            }
+            elseif($OS -eq 64)
+            {
+                try{wget -uri $url64 -outfile $out}
+                catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
+            }
+            else{$logs += "$(Get-Date) - OS architecture misread. Given value: $OS"}
+        }
+    }
+    
+    End
+    {
+        # Update (or create) the log file for this function with the contents of the $logs array.
+    	$LogPath = "$env:windir\Temp\DownloadEsetEndpoint_IITS.txt"
+    	foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
+    }
+}
+
+<#
+.Synopsis
    Installs ESET Endpoint.
 .DESCRIPTION
    Looks for a specific ESET Endpoint installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET Endpoint already installed (will cause repair or in-place upgrade if so).
@@ -2198,6 +2266,74 @@ function Install-EsetEndpoint
 function Check-EsetFS
 {
     Test-Path "$env:ProgramFiles\ESET\ESET File Security\egui.exe"
+}
+
+<#
+.Synopsis
+   Downloads the ESET File Security installer.
+.DESCRIPTION
+   Downloads a client-generic but OS-specific installer for ESET File Security. The downloaded file is always named EsetFS.msi.
+#>
+function Download-EsetFS
+{
+    [CmdletBinding()]
+    Param
+    ()
+
+    Begin
+    {
+        # Initialize the logs array.
+	    $logs=@()
+
+        # Declaring OS architecture container here so that I can check for (lack of) content later.
+        [Int]$OS = $null
+
+        # Download link for 32-bit File Security
+        $url32 = "http://www.dropbox.com/s/tvbbjr13k6fh5j6/file-security_32.msi?dl=1"
+        
+        # Download link for 32-bit File Security
+        $url64 = "http://www.dropbox.com/s/yr7e5r66hdjgduq/file-security_64.msi?dl=1"
+
+        # File name and path for downloaded installer
+        $out = "C:\IITS_Mgmt\Temp\EsetFS.msi"
+    }
+    
+    Process
+    {
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        Try
+        {
+            $logs += "$(Get-Date) - Fetching OS architecture."
+            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+            $OS=$matches[0]
+        }
+        Catch{$logs += "$(Get-Date) - Could not determine OS architecture."}
+
+        # Download the installer that matches the OS architecture.
+        if($OS)
+        {
+            $logs += "$(Get-Date) - Attempting to download installer that matches OS architecture."
+            
+            if($OS -eq 32 -or 86)
+            {
+                try{wget -uri $url32 -outfile $out}
+                catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
+            }
+            elseif($OS -eq 64)
+            {
+                try{wget -uri $url64 -outfile $out}
+                catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
+            }
+            else{$logs += "$(Get-Date) - OS architecture misread. Given value: $OS"}
+        }
+    }
+    
+    End
+    {
+        # Update (or create) the log file for this function with the contents of the $logs array.
+    	$LogPath = "$env:windir\Temp\DownloadEsetFS_IITS.txt"
+    	foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
+    }
 }
 
 <#
@@ -2358,69 +2494,5 @@ function Check-InstalledAv
     {
         if($avs){echo $avs}
         else{echo "none found"}
-    }
-}
-
-<#
-.Synopsis
-   Downloads the ESET File Security installer.
-.DESCRIPTION
-   Downloads a client-generic but OS-specific installer for ESET File Security. The downloaded file is always named EsetFS.msi.
-#>
-function Download-EsetFS
-{
-    [CmdletBinding()]
-    Param
-    ()
-
-    Begin
-    {
-        # Initialize the logs array.
-	    $logs=@()
-
-        # Declaring OS architecture container here so that I can check for (lack of) content later.
-        [Int]$OS = $null
-
-        # Download link for 32-bit File Security
-        $url32 = "http://www.dropbox.com/s/tvbbjr13k6fh5j6/file-security_32.msi?dl=1"
-        
-        # Download link for 32-bit File Security
-        $url64 = "http://www.dropbox.com/s/yr7e5r66hdjgduq/file-security_64.msi?dl=1"
-
-        # File name and path for downloaded installer
-        $out = "C:\IITS_Mgmt\Temp\EsetFS.msi"
-    }
-    
-    Process
-    {
-        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
-        Try
-        {
-            $logs += "$(Get-Date) - Fetching OS architecture."
-            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
-            $OS=$matches[0]
-        }
-        Catch{$logs += "$(Get-Date) - Could not determine OS architecture."}
-
-        # 
-        if($OS)
-        {
-            if($OS -eq 32 -or 86)
-            {
-                wget -uri $url32 -outfile $out
-            }
-            elseif($OS -eq 64)
-            {
-                wget -uri $url64 -outfile $out
-            }
-            else{$logs += "$(Get-Date) - OS architecture misread. Given value: $OS"}
-        }
-    }
-    
-    End
-    {
-        # Update (or create) the log file for this function with the contents of the $logs array.
-    	$LogPath = "$env:windir\Temp\DownloadEsetFS_IITS.txt"
-    	foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
