@@ -1867,6 +1867,9 @@ Managed Services Team"
    Automatically install ESET.
 .DESCRIPTION
    Installs ESET Agent and either ESET Endpoint or ESET File Security (if workstation or server, accordingly). Will not install components that are already present. If there's any failure, will notify the user and Managed Services.
+.INPUTS
+   ticket (switch): Enable to have this script send an e-mail to MSAlarm on completion, which will make a ticket on the Monitoring board. Even if called, will ONLY send an e-mail if there was actually an error
+   (i.e. will not send an e-mail if everything ran without incident).
 .EXAMPLE
    Install-Eset
 #>
@@ -1960,11 +1963,7 @@ function Install-Eset
                 }
 
                 $logs += "$(Get-Date) - Installing the ESET Agent."
-                try
-                {
-                    # If logging was called for this function, also call logging on sub-functions that have the option.
-                    Install-EsetAgent
-                }
+                try{Install-EsetAgent}
                 catch
                 {
                     $logs += "$(Get-Date) - There was a problem installing the ESET Agent: $($error[0])"
@@ -1998,14 +1997,15 @@ function Install-Eset
                     
                     $logs += "$(Get-Date) - Installing ESET Endpoint."
                     try{Install-EsetEndpiont}
-                    catch{
+                    catch
+                    {
                         $logs += "$(Get-Date) - There was a problem installing ESET Endpoint: $($error[0])"
                         $kill++
                     }
                 }
                 else
                 {
-                    $logs += "$(Get-Date) - Installed OS determined to not be Windows; cancelling procedure."
+                    $logs += "$(Get-Date) - Installed OS determined to not be Windows or otherwise not recognized; cancelling procedure."
                     $kill++
                 }
             }
@@ -2026,7 +2026,7 @@ function Install-Eset
     	foreach($log in $logs)
     	{"$log" | Out-File -FilePath $LogPath -Force -Append}
 	    
-        # (Optional) Send an e-mail to MSAlarm to create a ticket.
+        # (Optional) Send an e-mail to MSAlarm to create a ticket. Even if called, only triggers if there was actually a problem.
         if(($ticket) -and ($kill -ne 0))
         {
             # Find all ESET log files and add them to $logfiles.
@@ -2151,6 +2151,13 @@ function Install-EsetEndpoint
     Process
     {
         $logs += "$(Get-Date) - Verifying ESET Endpoint installer exists."
+        if(!(Test-Path $EndpointPath))
+        {
+            $logs += "$(Get-Date) - Downloading ESET Endpoint installer."
+            try{Download-EsetEndpoint}
+            catch{$logs += "$(Get-Date) - There was an error downloading the installer: $($error[0])"}
+        }
+        
         if(Test-Path $EndpointPath)
         {
             $logs += "$(Get-Date) - Attempting to install ESET Endpoint."
@@ -2166,8 +2173,6 @@ function Install-EsetEndpoint
             }
             catch{$logs += "$(Get-Date) - Could not install ESET Endpoint. Error: $($error[0])"}
         }
-        else{$logs += "$(Get-Date) - Expected ESET Endpoint installer does not exist."}
-        
     }
 
     End
