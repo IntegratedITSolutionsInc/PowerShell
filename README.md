@@ -9,6 +9,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Create-LocalAdministrator|Arjun Gheek|
 |Disable-365-Account|Michael Surtees|
 |Deploy-GetDiskChanges|Darren Khan|
+|Delete-IITStasks|Arjun Gheek|
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
 |Find-If-Domain-Blacklisted|Michael Surtees|
