@@ -12,6 +12,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Email-MSalarm|Darren Khan|
 |External-Kaseya-Push|Michael Surtees|
 |Find-If-Domain-Blacklisted|Michael Surtees|
+|Get-ActivationStatus|Darren Khan|
 |Get-All-App-Versions|Michael Surtees|
 |Get-CrashPlanLogs|Darren Khan|
 |Get-DriveChanges|Darren Khan|
@@ -28,6 +29,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Hide-User-From-GAL|Michael Surtees|
 |Remove-Application|Darren Khan|
 |Remove-Outlook-Automap|Michael Surtees|
+|Run-NetworkDetective|Darren Khan|
 |Send-PatchEmail|Darren Khan|
 |Toggle-ActionCenter|Darren Khan|
 |Create-USPGtaskrebootpopup|Arjun Gheek|
