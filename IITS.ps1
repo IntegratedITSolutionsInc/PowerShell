@@ -2405,6 +2405,11 @@ function Install-EsetFS
 .DESCRIPTION
    Looks up the host machine's OS and checks it against a list of known OSes. Recognized Windows OSes will return "server" or "workstation"; anything else (including unrecognized Windows OSes) will return "cannot determine".
 .EXAMPLE
+   Executed on Windows Server 2012 R2:
+    Check-MachineRole
+
+    server
+.EXAMPLE
    Executed on Windows 10:
     Check-MachineRole
 
