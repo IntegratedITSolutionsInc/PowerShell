@@ -2174,7 +2174,7 @@ function Download-EsetEndpoint
         {
             $logs += "$(Get-Date) - Attempting to download installer that matches OS architecture."
             
-            if($OS -eq 32 -or 86)
+            if(($OS -eq 32) -or ($OS -eq 86))
             {
                 try{wget -uri $url32 -outfile $out}
                 catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
@@ -2314,7 +2314,7 @@ function Download-EsetFS
         {
             $logs += "$(Get-Date) - Attempting to download installer that matches OS architecture."
             
-            if($OS -eq 32 -or 86)
+            if(($OS -eq 32) -or ($OS -eq 86))
             {
                 try{wget -uri $url32 -outfile $out}
                 catch{$logs += "$(Get-Date) - There was a problem downloading the installer: $($error[0])"}
