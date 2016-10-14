@@ -1684,7 +1684,7 @@ function Get-Projection {
             $projusedays = [math]::Round(($freespace / $dailyused),2)
                     <# if $projusedays is less than 1 month sends an e-mail , if not outputs to a log file #>
                     if ($projusedays -le 30 ) {
-                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c
+                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c -Subject "Disk space projection on $machine"
                     Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $projusedays days "
                     }
                     else {
@@ -2419,4 +2419,25 @@ function Run-NetWorkDetective
             }
         }
     }
+}
+
+<#
+.Synopsis
+   This procedure will delete all the tasks under task scheduler which have the custom tasks put in by managed services (tasks starting with IITS). Also it will delete
+   the profile.ps1 file (te repitory for all IITS code). The task will be run at the time a client will be off boarded.
+.DESCRIPTION
+   The function gets the names of all the .xml files for each task that starts has the task name of IITS in it somewhere. It will also delete the profile.ps1 file through a Remove-Item cmdlet
+.EXAMPLE
+   Delete-IITStasks
+#>
+function Delete-IITStasks
+{
+ <# Gets the name of all the .xml's that exist for each custom task from Managed Services #>
+$task = Get-Item C:\Windows\System32\Tasks\*iits*
+    <# Loops through the list and uses cmdline to delete each task#>
+    foreach($t in $task) {
+    schtasks /delete /tn $t.name /f
+    } 
+<# Deletes the profile.ps1 file #>
+Remove-Item C:\Windows\System32\WindowsPowerShell\v1.0\profile.ps1
 }
