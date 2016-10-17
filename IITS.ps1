@@ -11,14 +11,9 @@
 function Get-KaseyaMachineID
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
-    (
-    )
-    Begin
-    {
-    }
+    ()
+    
     Process
     {
         try
@@ -36,9 +31,6 @@ function Get-KaseyaMachineID
         {
             $env:computername
         }   
-    }
-    End
-    {
     }
 }
 
@@ -133,8 +125,6 @@ function Email-MSalarm
 function Toggle-ActionCenter
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
         # Param1 help description
@@ -201,15 +191,9 @@ function Toggle-ActionCenter
 function Get-MailFlowStats
 {
     [CmdletBinding()]
-    [Alias()]
      Param
     (
-        # Param1 help description
-        [Parameter(Mandatory=$false,
-                   ValueFromPipeline=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
-        $Param1,
+        # Enables outputing of an error log (.txt) at conclusion of procedure.
         [switch]$errorlog
     )
 
@@ -318,11 +302,9 @@ function Get-MailFlowStats
 function Remove-AutoCorrect
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
-        # Param1 help description
+        # The word that should be removed.
         [Parameter(Mandatory=$true,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
@@ -395,8 +377,6 @@ function Remove-AutoCorrect
 function disable-365-account
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param ([string]$mailbox=(read-host "Enter user's email address:"))
 
     #Connect to client's 365
@@ -446,8 +426,6 @@ $parts[0]
 function external-kaseya-push
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
         # Param1 help description
@@ -493,18 +471,10 @@ function external-kaseya-push
 <#
 .Synopsis
    Hides a user from the GAL
-.DESCRIPTION
-   
-.EXAMPLE
-   
-.EXAMPLE
-   
 #>
 function hide-user-from-GAL
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
         [Parameter(Mandatory=$true,
@@ -538,111 +508,6 @@ function hide-user-from-GAL
 
 <#
 .Synopsis
-   Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
-.DESCRIPTION
-   Determine the root org (groupName) based on the local Kaseya ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
-.EXAMPLE
-   Get-EsetLink
-
-   http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
-.OUTPUTS
-   URL (string) or null
-.FUNCTIONALITY
-   Downloads a URL link to an installer.
-#>
-function Get-EsetLink
-{
-    [CmdletBinding()]
-    [OutputType([String])]
-    Param
-    ()
-    
-    Begin
-    {
-        # Initialize the killswitch.
-        $kill = 0
-
-        # Initialize the logs array.
-        $logs = @("===================","$(Get-Date) - Beginning Get-EsetLink.")
-
-        # Initialize the URL varible.
-        $orgLink = $null
-        
-        # Verify the local PowerShell version is sufficient to actually run the main function.
-        $logs += "$(Get-Date) - Checking installed PowerShell version for compatibility."
-        if (Check-PSVersion)
-        {
-            $logs += "$(Get-Date) - PowerShell version insufficient to run Get-EsetLink. Current version: $($PSVersionTable.PSVersion.Major)"
-            $kill++
-        }
-
-        # Verify EsetKey actually exists where it is supposed to be.
-        $logs += "$(Get-Date) - Checking for existence of EsetKey.csv."
-        if(!(Test-Path C:\IITS_Scripts\EsetKey.csv))
-        {
-            $logs += "$(Get-Date) - EsetKey.csv does not exist! Download fresh copy of EsetKey.csv required."
-            $kill++
-            Write-Host "EsetKey.csv does not exist! Please download a fresh copy of EsetKey.csv." -BackgroundColor Black -ForegroundColor Red
-        }       
-    }
-
-    Process
-    {
-        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
-        $logs += "$(Get-Date) - Pulling full Kaseya ID."
-        $machName = Get-KaseyaMachineID
-        
-        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
-        $logs += "$(Get-Date) - Pulling group name from machine name '$machName'."
-        Try
-        {
-            $machName -match '[\w-]+$' | Out-Null
-            [String]$groupName = $matches[0]
-        }
-        Catch
-        {
-            $logs += "$(Get-Date) - Could not run RegEx on given machine name '$machName'. Error: $($Error[0])"
-            $kill++
-        }
-
-        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
-        Try
-        {
-            $logs += "$(Get-Date) - Fetching OS architecture."
-            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
-            [Int]$machOS=$matches[0]
-        }
-        Catch
-        {
-            $logs += "$(Get-Date) - Could not determine OS architecture."
-            $kill++
-        }
-        
-        # If there have been any issues (which would cause $kill /= 0), don't process the rest of the Process block.
-        if($kill -eq 0)
-        {
-            # Import the key and search for the group and OS architecture. Save the result to a container.
-            Try{$orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)}
-            Catch{$logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"}
-        }
-        else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
-        
-        # Output the container with the ESET link.
-        echo $orgLink
-    }
-
-    End
-    {
-        $logs += "$(Get-Date) - End of log for Get-EsetLink."
-        
-        # Update (or create) the log file for this function with the contents of the $logs array.
-        $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
-        foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
-    }
-}
-
-<#
-.Synopsis
    Gets the account used for all services
 .DESCRIPTION
    Uses WMI to find the list of services and the accounts they are using to start.  Added description to aid in figuring out what it does.  The Output will be returned to the screen and can then be sent to a file. 
@@ -653,7 +518,6 @@ function Get-EsetLink
 function Get-ServiceAccount
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         # Param1 help description
@@ -711,7 +575,6 @@ function Get-ServiceAccount
 function Get-InstalledPrograms
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         # ComuputerName
@@ -793,7 +656,6 @@ function Get-InstalledPrograms
 function Remove-Application
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         # Param1 help description
@@ -885,23 +747,7 @@ function Remove-Application
 
 function Get-All-App-Versions
 {
-    [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
-    Param
-    (
-    )
-    Begin
-    {
-    }
-    Process
-    {
     Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, Publisher, InstallDate | Export-Csv "c:\iits_mgmt\all_app_versions.csv"
-    
-    }
-    End
-    {
-    }
 }
 
 <#
@@ -915,7 +761,6 @@ function Get-All-App-Versions
 function Get-CrashPlanLogs
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         [Parameter(Mandatory=$true,
@@ -971,7 +816,6 @@ function Get-CrashPlanLogs
 function Create-Zip
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         # Source Directory
@@ -1052,8 +896,6 @@ function Create-Zip
 function Find-If-Domain-Blacklisted
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param
     (
     )
@@ -1179,7 +1021,6 @@ function Find-If-Domain-Blacklisted
 #>
 function Remove-Outlook-Automap
 {
-
     Begin {
 
         #Connect to client's 365
@@ -1300,7 +1141,6 @@ function Get-DriveStatistics
 function Get-DiskChanges
 {
     [CmdletBinding()]
-    [Alias()]
     Param
     (
         [switch]$ErrorLog
@@ -1470,6 +1310,7 @@ function Get-DiskChanges
 #>
 function Check-PSVersion
 {
+    [CmdletBinding()]
     Param
     (
         # Switch parameter; call to send e-mail to MSAlarm, which will make a ticket.
@@ -1661,8 +1502,6 @@ function Get-Projection {
 function disable-365-account
 {
     [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
     Param ([string]$mailbox=(read-host "Enter user's email address:"))
 
     #Connect to client's 365
@@ -1861,111 +1700,6 @@ Managed Services Team"
                 "$booboo" | Out-File -FilePath $LogPath -Force -Append
             }
         }
-    }
-}
-
-<#
-.Synopsis
-   Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
-.DESCRIPTION
-   Determine the root org (groupName) based on the local Kaseya ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
-.EXAMPLE
-   Get-EsetLink
-
-   http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
-.OUTPUTS
-   URL (string) or null
-.FUNCTIONALITY
-   Downloads a URL link to an installer.
-#>
-function Get-EsetLink
-{
-    [CmdletBinding()]
-    [OutputType([String])]
-    Param
-    ()
-    
-    Begin
-    {
-        # Initialize the killswitch.
-        $kill = 0
-
-        # Initialize the logs array.
-        $logs = @("===================","$(Get-Date) - Beginning Get-EsetLink.")
-
-        # Initialize the URL varible.
-        $orgLink = $null
-        
-        # Verify the local PowerShell version is sufficient to actually run the main function.
-        $logs += "$(Get-Date) - Checking installed PowerShell version for compatibility."
-        if (Check-PSVersion)
-        {
-            $logs += "$(Get-Date) - PowerShell version insufficient to run Get-EsetLink. Current version: $($PSVersionTable.PSVersion.Major)"
-            $kill++
-        }
-
-        # Verify EsetKey actually exists where it is supposed to be.
-        $logs += "$(Get-Date) - Checking for existence of EsetKey.csv."
-        if(!(Test-Path C:\IITS_Scripts\EsetKey.csv))
-        {
-            $logs += "$(Get-Date) - EsetKey.csv does not exist! Download fresh copy of EsetKey.csv required."
-            $kill++
-            Write-Host "EsetKey.csv does not exist! Please download a fresh copy of EsetKey.csv." -BackgroundColor Black -ForegroundColor Red
-        }       
-    }
-
-    Process
-    {
-        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
-        $logs += "$(Get-Date) - Pulling full Kaseya ID."
-        $machName = Get-KaseyaMachineID
-        
-        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
-        $logs += "$(Get-Date) - Pulling group name from machine name '$machName'."
-        Try
-        {
-            $machName -match '[\w-]+$' | Out-Null
-            [String]$groupName = $matches[0]
-        }
-        Catch
-        {
-            $logs += "$(Get-Date) - Could not run RegEx on given machine name '$machName'. Error: $($Error[0])"
-            $kill++
-        }
-
-        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
-        Try
-        {
-            $logs += "$(Get-Date) - Fetching OS architecture."
-            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
-            [Int]$machOS=$matches[0]
-        }
-        Catch
-        {
-            $logs += "$(Get-Date) - Could not determine OS architecture."
-            $kill++
-        }
-        
-        # If there have been any issues (which would cause $kill /= 0), don't process the rest of the Process block.
-        if($kill -eq 0)
-        {
-            # Import the key and search for the group and OS architecture. Save the result to a container.
-            Try{$orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)}
-            Catch{$logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"}
-        }
-        else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
-        
-        # Output the container with the ESET link.
-        echo $orgLink
-    }
-
-    End
-    {
-        $logs += "$(Get-Date) - End of log for Get-EsetLink."
-        
-        # Update (or create) the log file for this function with the contents of the $logs array.
-        $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
-        foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
     }
 }
 
@@ -2171,12 +1905,118 @@ function Check-EsetAgent
 
 <#
 .Synopsis
+   Match an organization and a Windows OS architecture (32 or 64) to download an installer. Only works on a single machine at a time.
+.DESCRIPTION
+   Determine the root org (groupName) based on the local Kaseya ID (machName). Determine the OS architecture (machOS) of the machine this script is run on (which will be the same machine in machName). Match machOrg and machOS against key EsetKey.csv to get a Dropbox download link to a company-specific ESET Agent installer.
+.EXAMPLE
+   Get-EsetLink
+
+   http://www.dropbox.com/s/[uniqueURL]/Agent_sccit_64.msi?dl=1
+.OUTPUTS
+   URL (string) or null
+.FUNCTIONALITY
+   Downloads a URL link to an installer.
+#>
+function Get-EsetLink
+{
+    [CmdletBinding()]
+    [OutputType([String])]
+    Param
+    ()
+    
+    Begin
+    {
+        # Initialize the killswitch.
+        $kill = 0
+
+        # Initialize the logs array.
+        $logs = @("===================","$(Get-Date) - Beginning Get-EsetLink.")
+
+        # Initialize the URL varible.
+        $orgLink = $null
+        
+        # Verify the local PowerShell version is sufficient to actually run the main function.
+        $logs += "$(Get-Date) - Checking installed PowerShell version for compatibility."
+        if (Check-PSVersion)
+        {
+            $logs += "$(Get-Date) - PowerShell version insufficient to run Get-EsetLink. Current version: $($PSVersionTable.PSVersion.Major)"
+            $kill++
+        }
+
+        # Verify EsetKey actually exists where it is supposed to be.
+        $logs += "$(Get-Date) - Checking for existence of EsetKey.csv."
+        if(!(Test-Path C:\IITS_Scripts\EsetKey.csv))
+        {
+            $logs += "$(Get-Date) - EsetKey.csv does not exist! Download fresh copy of EsetKey.csv required."
+            $kill++
+            Write-Host "EsetKey.csv does not exist! Please download a fresh copy of EsetKey.csv." -BackgroundColor Black -ForegroundColor Red
+        }       
+    }
+
+    Process
+    {
+        # This is the name of the machine. It will be converted into the name of the org and then checked against a spreadsheet/key.
+        $logs += "$(Get-Date) - Pulling full Kaseya ID."
+        $machName = Get-KaseyaMachineID
+        
+        # RegEx the machine name to extract the group name. DO NOT output the actual match result.
+        $logs += "$(Get-Date) - Pulling group name from machine name '$machName'."
+        Try
+        {
+            $machName -match '[\w-]+$' | Out-Null
+            [String]$groupName = $matches[0]
+        }
+        Catch
+        {
+            $logs += "$(Get-Date) - Could not run RegEx on given machine name '$machName'. Error: $($Error[0])"
+            $kill++
+        }
+
+        # Get the OS architecture of the target (Windows) machine. DO NOT output the actual match result.
+        Try
+        {
+            $logs += "$(Get-Date) - Fetching OS architecture."
+            (Get-WmiObject Win32_OperatingSystem).OSArchitecture -match '\d+' | Out-Null
+            [Int]$machOS=$matches[0]
+        }
+        Catch
+        {
+            $logs += "$(Get-Date) - Could not determine OS architecture."
+            $kill++
+        }
+        
+        # If there have been any issues (which would cause $kill /= 0), don't process the rest of the Process block.
+        if($kill -eq 0)
+        {
+            # Import the key and search for the group and OS architecture. Save the result to a container.
+            Try{$orgLink = (Import-Csv "C:\IITS_Scripts\EsetKey.csv" | where{$_.machOrg -eq $groupName} | where{$_.machOS -eq $machOS} | % link)}
+            Catch{$logs += "$(Get-Date) - Error while importing EsetKey.csv: $($Error[0])"}
+        }
+        else {$logs += "$(Get-Date) - Skipping remaining Process block. Killswitch trigger count = $kill"}
+        
+        # Output the container with the ESET link.
+        echo $orgLink
+    }
+
+    End
+    {
+        $logs += "$(Get-Date) - End of log for Get-EsetLink."
+        
+        # Update (or create) the log file for this function with the contents of the $logs array.
+        $LogPath = "$env:windir\Temp\GetEsetLink_IITS.txt"
+        foreach($log in $logs){"$log" | Out-File -FilePath $LogPath -Force -Append}
+    }
+}
+
+<#
+.Synopsis
    Installs the ESET Agent.
 .DESCRIPTION
    Looks for a specific ESET Agent installer in an expected directory and attempts to execute it silently. DOES NOT check if ESET Agent already installed (will cause repair or in-place upgrade if so).
 #>
 function Install-EsetAgent
 {
+    [CmdletBinding()]
     Param
     ()
 
@@ -2317,6 +2157,7 @@ function Download-EsetEndpoint
 #>
 function Install-EsetEndpoint
 {
+    [CmdletBinding()]
     Param
     ()
 
@@ -2461,6 +2302,7 @@ function Download-EsetFS
 #>
 function Install-EsetFS
 {
+    [CmdletBinding()]
     Param
     ()
 
@@ -2546,6 +2388,7 @@ function Install-EsetFS
 #>
 function Check-MachineRole
 {
+    [CmdletBinding()]
     [Alias("cmr","Get-Role")]
     [OutputType([String])]
     Param
@@ -2579,13 +2422,13 @@ function Check-MachineRole
    Computer with AVG:
    Check-InstalledAV
 
-   AVG
+   AVG Antivirus
 .EXAMPLE
    Computer with AVG *and* ESET:
    Check-InstalledAv
 
    AVG
-   ESET
+   ESET Endpoint Antivirus
 #>
 function Check-InstalledAv
 {
