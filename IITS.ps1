@@ -2441,3 +2441,51 @@ $task = Get-Item C:\Windows\System32\Tasks\*iits*
 <# Deletes the profile.ps1 file #>
 Remove-Item C:\Windows\System32\WindowsPowerShell\v1.0\profile.ps1
 }
+
+<#
+.Synopsis
+   This function will check the LAST RUN status of all IITS custom tasks in task scheduler. will send an e-mail if 2 consecutive runs have failed
+.DESCRIPTION.
+   This function gets list of all IITS tasks. created a csv file with the last run results of each task. gets the run result of the most recent run, compares the 2 run results and sends e-mail if 2 consecutive runs have failed
+.EXAMPLE
+  check-IITStasks
+#>
+
+function check-IITStasks {
+<# list of all tasks the names of which have iits in it #>
+$task = Get-Item C:\Windows\System32\Tasks\*iits*
+<# The csv file is imported, this file contains the last run result of each task #>
+$listold = Import-Csv C:\Windows\Temp\task.csv -ErrorAction SilentlyContinue
+<# since the above variable has the DATA of teh csv file, it is deleted #>
+Remove-Item C:\Windows\Temp\task.csv -ErrorAction SilentlyContinue
+    <# for each iits task #>
+    foreach($t in $task) {
+        $listnew = schtasks /query /fo csv /v /tn $t.name | ConvertFrom-Csv | Select-Object TaskName ,"Last Result","Last Run Time","Next Run Time"
+        $listnew | Export-Csv -Append C:\Windows\Temp\task.csv
+        $newlastrun = $listnew.'Last Run Time'
+        $newlastresult = $listnew.'Last Result'
+        $taskname = $listnew.TaskName
+            <# if the task in the loop was successful '0'. This is the most recent result of the task #>
+            if ($listnew.'Last Result' -eq 0) {
+                $output += "the most recent run of $taskname was successful. It ran at $newlastrun and succedded with the following result $newlastresult."
+            }
+            <# if the task in the loop failed '1' or negative #>
+            else {
+                <# Gets the Last Run result of the task the loop is at #>
+                [int]$oldres = $listold.Where({$PSItem.TaskName -eq $taskname}).'Last Result'
+                <# The last run time that the task in the loop ran at #>
+                $lastdate = $listold.Where({$PSItem.TaskName -eq $taskname}).'Last Run Time'
+                <# because the script has reached here, it means that the most recent result is failed and now it is compared to the OLD results of the task and the old run time (it should not be the same) #>
+                if ($oldres -lt 0 -or $oldres -eq 1 -and $lastdate -ne $newlastrun) {
+                    $machine = Get-KaseyaMachineID
+                    Email-MSalarm -Body "On $machine 2 consecutive runs of task $taskname have FAILED. One run failed at $lastdate and one failed at the most recent run. Please investigate." -subject "On $machine 2 consecutive runs of task $taskname have failed."
+                    $output+= "SENT  EMAIL. The task $taskname has had 2 consecutive failures. One run failed at $lastdate and one failed at the most recent run.This needs to be investigated."
+                }
+                else {
+                    <# If the task last run time and this run time are the same then it means that the script has not run most recently because it runs every hour recorded the last result so this is not needed #>
+                    $output += "$taskname most recent run was at $newlastrun and the result was $newlastresult. If the result is less than 0 or 1. The task has failed"
+                }
+            }
+    }
+    $output | Out-File C:\Windows\Temp\tasklogs.txt
+}
