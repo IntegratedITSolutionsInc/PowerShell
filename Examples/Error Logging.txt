@@ -14,7 +14,7 @@ Process
 
 End
 {
-	# (Optional) Update (or create) the log file for this function with the contents of the $logs array.
+	# Update (or create) the log file for this function with the contents of the $logs array.
 	if($logging)
 	{
 		$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"

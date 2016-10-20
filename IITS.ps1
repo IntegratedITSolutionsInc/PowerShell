@@ -10,7 +10,6 @@
 #>
 function Get-KaseyaMachineID
 {
-    [CmdletBinding()]
     Param
     ()
     
@@ -190,8 +189,7 @@ function Toggle-ActionCenter
 #>
 function Get-MailFlowStats
 {
-    [CmdletBinding()]
-     Param
+    Param
     (
         # Enables outputing of an error log (.txt) at conclusion of procedure.
         [switch]$errorlog
@@ -517,7 +515,6 @@ function hide-user-from-GAL
 
 function Get-ServiceAccount
 {
-    [CmdletBinding()]
     Param
     (
         # Param1 help description
@@ -574,7 +571,6 @@ function Get-ServiceAccount
 #>
 function Get-InstalledPrograms
 {
-    [CmdletBinding()]
     Param
     (
         # ComuputerName
@@ -760,7 +756,6 @@ function Get-All-App-Versions
 #>
 function Get-CrashPlanLogs
 {
-    [CmdletBinding()]
     Param
     (
         [Parameter(Mandatory=$true,
@@ -895,10 +890,8 @@ function Create-Zip
 #>
 function Find-If-Domain-Blacklisted
 {
-    [CmdletBinding()]
     Param
-    (
-    )
+    ()
 
     Begin
     {
@@ -1048,7 +1041,6 @@ function Remove-Outlook-Automap
 #>
 function Get-DriveStatistics
 {
-    [CmdletBinding()]
     Param
     (
         [switch]$ErrorLog
@@ -1140,7 +1132,6 @@ function Get-DriveStatistics
 #>
 function Get-DiskChanges
 {
-    [CmdletBinding()]
     Param
     (
         [switch]$ErrorLog
@@ -1310,7 +1301,6 @@ function Get-DiskChanges
 #>
 function Check-PSVersion
 {
-    [CmdletBinding()]
     Param
     (
         # Switch parameter; call to send e-mail to MSAlarm, which will make a ticket.
@@ -1339,7 +1329,6 @@ function Check-PSVersion
 #>
 function Get-VSSStatistics
 {
-    [CmdletBinding()]
     Param
     (
         [switch]$ErrorLog
@@ -1919,7 +1908,6 @@ function Check-EsetAgent
 #>
 function Get-EsetLink
 {
-    [CmdletBinding()]
     [OutputType([String])]
     Param
     ()
@@ -2388,7 +2376,6 @@ function Install-EsetFS
 #>
 function Check-MachineRole
 {
-    [CmdletBinding()]
     [Alias("cmr","Get-Role")]
     [OutputType([String])]
     Param
@@ -2432,7 +2419,6 @@ function Check-MachineRole
 #>
 function Check-InstalledAv
 {
-    [CmdletBinding()]
     [Alias("Check-AV")]
     [OutputType([string])]
     Param
