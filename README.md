@@ -7,6 +7,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Compare-Executables| Darren Khan|
 |Create-Zip|Darren Khan|
 |Create-LocalAdministrator|Arjun Gheek|
+|check-IITStasks|Arjun Gheek|
 |Disable-365-Account|Michael Surtees|
 |Deploy-GetDiskChanges|Darren Khan|
 |Delete-IITStasks|Arjun Gheek|
