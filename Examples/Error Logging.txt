@@ -3,6 +3,7 @@
 
 Begin
 {
+	# Initialize the logs array.
 	$logs=@()
 }
 
@@ -13,6 +14,7 @@ Process
 
 End
 {
+	# Update (or create) the log file for this function with the contents of the $logs array.
 	if($logging)
 	{
 		$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
