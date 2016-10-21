@@ -1483,8 +1483,8 @@ function Get-Projection {
         <# free space on the drive, last item in the freespace column #>
         $freespace = $volcsv.freespace[$count]
 
-            <# if the total used space is greater than 0 #>
-            if ($totalused -gt 0.00) {
+            <# if the total used space is LESS than 0 which means that usedspace is in negative and we have used that space #>
+            if ($totalused -lt 0.00) {
             <# gets the current time with the last time and date entry in the sheet #>
             $currtime = $volcsv.date[$count]+" "+$volcsv.time[$count]
             <# gets the start time from the first entry of time and date in the csv file #>
@@ -1495,18 +1495,19 @@ function Get-Projection {
             $dailyused = $totalused / $timediff
             <# freespace currently on a volume is divided by the dailyused average to get the projected days #>
             $projusedays = [math]::Round(($freespace / $dailyused),2)
+            [decimal]$posprojusedays = -($projusedays)
                     <# if $projusedays is less than 1 month sends an e-mail , if not outputs to a log file #>
-                    if ($projusedays -le 30 ) {
-                    Email-MSalarm -Body "$drive drive on $machine will go low on free disk space soon. In the last $timediff days, $totalused GB was used. At this time $freespace GB is free of $Size GB. Based on this trend $freespace GB will be used in $projusedays days. Please find the disk usage report under Documents tab in the ticket " -Attachment C:\IITS_Scripts\DiskInformation\$c -Subject "[$machine] - Disk space projection"
-                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $projusedays days "
+                    if ($posprojusedays -le 30 ) {
+                    Email-MSalarm -Body "$drive drive on $machine will go low on free disk space soon. In the last $timediff days, $totalused GB was used. At this time $freespace GB is free of $Size GB. Based on this trend $freespace GB will be used in $posprojusedays days. Please find the disk usage report under Documents tab in the ticket " -Attachment C:\IITS_Scripts\DiskInformation\$c -Subject "[$machine] - Disk space projection"
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $posprojusedays days. e-mail is sent "
                     }
                     else {
-                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, space will not exhaust in 30 days instead will exhaust in $projusedays days "
+                    Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, space will not exhaust in 30 days instead will exhaust in $posprojusedays days "
                     }
              }
-             <# If the total used space is less than 0 ,is a negative #>
+             <# If the total used space is greater than 0 ,is a positive which means we have gained space #>
             else {
-             Add-Content $logfile "The average space used for $drive DRIVE is $totalused GB. email will not be sent because free space will not exhaust"
+             Add-Content $logfile "The average space used for $drive DRIVE is $totalused GB. If this is positive this means we have GAINED FREE SPACE.email will not be sent because free space will not exhaust IN 30 DAYS."
             }
                
         }
