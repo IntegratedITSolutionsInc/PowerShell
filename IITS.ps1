@@ -1497,7 +1497,7 @@ function Get-Projection {
             $projusedays = [math]::Round(($freespace / $dailyused),2)
                     <# if $projusedays is less than 1 month sends an e-mail , if not outputs to a log file #>
                     if ($projusedays -le 30 ) {
-                    Email-MSalarm -Body "$drive drive on $machine is low on free disk space. In the last $timediff days, $totalused GB was used. Based on this trend $freespace GB will be used in $projusedays days" -Attachment C:\IITS_Scripts\DiskInformation\$c -Subject "Disk space projection on $machine"
+                    Email-MSalarm -Body "$drive drive on $machine will go low on free disk space soon. In the last $timediff days, $totalused GB was used. At this time $freespace GB is free of $Size GB. Based on this trend $freespace GB will be used in $projusedays days. Please find the disk usage report under Documents tab in the ticket " -Attachment C:\IITS_Scripts\DiskInformation\$c -Subject "[$machine] - Disk space projection"
                     Add-Content $logfile "$drive drive has a free space of $freespace GB. For the last $timediff days the $totalused GB was used, FREE space will exhaust in $projusedays days "
                     }
                     else {
