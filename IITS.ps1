@@ -3055,3 +3055,81 @@ function Check-InstalledAv
         else{echo "none found"}
     }
 }
+
+<#
+.Synopsis
+   This script creates a txt file with the names of the users and their Password age. The script also creates another txt file where the users status is either Disabled or password was never set
+.DESCRIPTION
+   The script finds the age of the password for all the users which are enabled and for which the password was set atleast once. user needs to enter the number of days that he wants the last password set date to be older than. Output will be sent to txt files.
+.EXAMPLE
+   Get-ADUserPage -90 (where 90 is the number of days that we want the lastpasswordset to be older than)
+.OUTPUT
+    Output is sent at 2 places
+    C:\IITS_Mgmt\Temp\listP.txt will be the list of users for which the password was never set AND the users which are Disabled at this time
+    C:\IITS_Mgmt\Temp\passwordage.txt will be the list of current users the password for which was last set more than the days you specified.
+  
+#>
+
+
+function Get-ADUserPage {
+[cmdletBinding()]
+Param
+(
+    # Users who have the passwords greater than this number of days
+    [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+    $numdays
+)
+$listP = "C:\IITS_Mgmt\Temp\listP.txt"
+$testpath = Test-Path $listP
+$txtpass = "C:\IITS_Mgmt\Temp\passwordage.txt"
+$testpathP = Test-Path $txtpass
+    if($testpath -eq $true){
+        if($testpathP -eq $true){
+        Remove-Item $txtpass
+        Remove-Item $listP
+        New-Item -Path C:\IITS_Mgmt\Temp\listP.txt -ItemType "file"
+        New-Item -Path C:\IITS_Mgmt\Temp\passwordage.txt -ItemType "file"
+        }
+        else{
+            New-Item -Path C:\IITS_Mgmt\Temp\listP.txt -ItemType "file"
+            New-Item -Path C:\IITS_Mgmt\Temp\passwordage.txt -ItemType "file"
+        }
+    }
+    else{
+       New-Item -Path C:\IITS_Mgmt\Temp\listP.txt -ItemType "file"
+    }
+Import-Module ActiveDirectory
+$pdcEm = (get-addomaincontroller -discover -service PrimaryDC).Name
+$hostM = (Get-WmiObject win32_computersystem).name
+$date = Get-Date
+if($pdcEm -eq $hostM) {
+    $user = Get-ADUser -filter * -Properties *
+    foreach($u in $user){
+        if($u.PasswordLastSet -eq $null) {
+            $userN = $u.Name
+            Add-Content $listP "The PasswordLastSet value for $userN has a Null value"     
+        }
+        else{
+        $dateofP = $u.PasswordLastSet
+        $age = ($date - $dateofP).Days
+        $enable = $u.Enabled
+        if($enable -eq $true){
+            if($age -gt $numdays) {
+            $u | Select-Object @{Name="User";Expression = {$_.Name}},@{Name="PasswordLastSet";Expression={$_.PasswordLastSet}},@{Name="PasswordNeverExpires";Expression={$_.PasswordNeverExpires}},@{Name="AgeAsofToday";Expression={$age}} | Out-File -Append C:\IITS_Mgmt\Temp\Passwordage.txt
+            }
+            else {
+            $userN = $u.Name
+            Add-Content $listP "The $userN PASSWORD is less than $numdays old."
+            }
+        }
+        else{
+        $user = $u.Name
+        Add-Content $listP "The account for $user is Disabled"
+        }
+        }
+    }
+}
+else {
+    Add-Content $listP "On $date the command ADUserPage was run on $hostM machine which is NOT a PDCEmulator"
+}
+}
