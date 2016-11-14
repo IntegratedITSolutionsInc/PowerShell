@@ -1,24 +1,47 @@
 [Param()]
+
 [Switch]$logging
 
+
+
 Begin
+
 {
+
 	# Initialize the logs array.
+
 	$logs=@()
+
 }
+
+
 
 Process
+
 {
+
 	$logs += "$(Get-Date) - "
+
 }
 
+
+
 End
+
 {
+
 	# Update (or create) the log file for this function with the contents of the $logs array.
+
 	if($logging)
+
 	{
+
 		$LogPath = "$env:windir\Temp\[FunctionName]_IITS.txt"
+
 		foreach($log in $logs)
+
 		{"$log" | Out-File -FilePath $LogPath -Force -Append}
+
 	}
+
 }
