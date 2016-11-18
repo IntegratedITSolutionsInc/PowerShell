@@ -1,28 +1,55 @@
 Begin
+
 {
+
 	# Comparison list 1
+
 	$list1 = @([generate a list])
+
 	#Comparison list 2
+
 	$list2 = @([generate a different list with a common element; common element does not need to have the same label])
+
 	# Compilation list (empty)
+
 	$list3 = @()
+
 }
 
+
+
 Process
+
 {
+
 	foreach ($element in $list2)
+
 	{
+
 		$Match = $list1 | Where-Object {($_.label1 -eq $element.label2)}
+
 		if($Match)
+
 		{
+
 			$Temp = [ordered]@{
+
 				'CommonElement' = $element.label2
+
 				'Other Element' = $element.aaa
+
 				...
+
 				'Other Element' = $element.zzz
+
 			}
+
 			$list3 += New-Object -TypeName psobject -Property $Temp
+
 		}
+
 	}
+
 	return $list3
+
 }
