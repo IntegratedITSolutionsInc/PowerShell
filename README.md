@@ -14,6 +14,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |Create-USPGtaskrebootpopup|Arjun Gheek|
 |Create-Zip|Darren Khan|
 |check-IITStasks|Arjun Gheek|
+|Delete-EsetInstallers|Antonio Vincentelli|
 |Disable-365-Account|Michael Surtees|
 |Deploy-GetDiskChanges|Darren Khan|
 
