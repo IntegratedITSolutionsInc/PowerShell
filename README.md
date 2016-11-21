@@ -24,6 +24,7 @@ This file contains all of the functions that IITS distributes to all managed ser
 |External-Kaseya-Push|Michael Surtees|
 |Find-If-Domain-Blacklisted|Michael Surtees|
 |Get-ActivationStatus|Darren Khan|
+|Get-ADUserPage|Arjun Gheek|
 |Get-All-App-Versions|Michael Surtees|
 |Get-CrashPlanLogs|Darren Khan|
 |Get-DriveChanges|Darren Khan|
