@@ -3133,3 +3133,32 @@ else {
     Add-Content $listP "On $date the command ADUserPage was run on $hostM machine which is NOT a PDCEmulator"
 }
 }
+
+<#
+.Synopsis
+   Deletes all ESET installation files from the Kaseya working folder.
+.DESCRIPTION
+   Finds all files in C:\IITS_Mgmt\Temp that match the format (case-insensitive) "ESET*.msi" and deletes them.
+#>
+function Delete-EsetInstallers
+{
+    Param()
+
+    Begin
+    {
+        # Kaseya agent working folder.
+        $working = "C:\IITS_Mgmt\Temp"
+
+        # All files in $working.
+        $files = gci $working
+    }
+
+    Process
+    {
+        foreach($file in $files)
+        {
+            if($file.Name -match 'ESET.*\.msi')
+            {Remove-Item "$working\$($file.name)"}
+        }
+    }
+}
