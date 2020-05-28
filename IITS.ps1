@@ -3162,3 +3162,10 @@ function Delete-EsetInstallers
         }
     }
 }
+
+<# Uninstall AARDRDC #>
+$adb = Get-WmiObject win32_product | where {$_.Name -like 'Adobe Acrobat Reader DC'}
+foreach($a in $adb){
+    $ide = $a.IdentifyingNumber
+    cmd.exe /c "Msiexec.exe /x$ide /qn /norestart"
+}
